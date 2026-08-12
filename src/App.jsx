@@ -1,10 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Droplets, Users, Wrench, Package, CreditCard,
-  Search, Plus, X, Menu, CheckCircle, AlertCircle,
-  Mail, Phone, MapPin, Trash2, TrendingUp, DollarSign,
-  Clock, ShoppingCart
-} from 'lucide-react';
+import { Droplets, Users, Wrench, Package, CreditCard, Search, Plus, X, Menu, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Mail, Phone, MapPin, Trash2, TrendingUp, DollarSign, Clock, ShoppingCart } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import './App.css';
 
