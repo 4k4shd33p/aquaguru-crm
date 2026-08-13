@@ -26,8 +26,20 @@ export default function App() {
   const [selectedCustomerForAsset, setSelectedCustomerForAsset] = useState(null)
   const [selectedAssetForTicket, setSelectedAssetForTicket] = useState(null)
 
-  // Form States
-  const [newCust, setNewCust] = useState({ full_name: '', primary_phone: '', address: '', area_zone: 'Zone 1 - Central', customer_type: 'Residential' })
+  // Form States (With Custom Metadata JSONB Support for Dropdowns & Dates)
+  const [newCust, setNewCust] = useState({ 
+    full_name: '', 
+    primary_phone: '', 
+    address: '', 
+    area_zone: 'Zone 1 - Central', 
+    customer_type: 'Residential',
+    custom_metadata: {
+      water_source: 'Borewell',
+      installation_date: '',
+      service_frequency: 'Monthly'
+    }
+  })
+
   const [newAsset, setNewAsset] = useState({ asset_tag_nickname: 'Main Kitchen Unit', asset_category: 'Domestic RO', model_name: 'AquaGuard Elite Pro', serial_number: '', membrane_gpd: '100 GPD' })
   const [newTicket, setNewTicket] = useState({ visit_reason: 'Quarterly Servicing', service_type_tag: '🟢 AMC Enrolled', work_performed_notes: 'Sanitized storage tank, replaced sediment filter cartridge.', internal_parts_cost: '0', technician_payout_fee: '300', amount_collected_on_site: '0', payment_mode: 'UPI' })
 
@@ -63,11 +75,21 @@ export default function App() {
 
   async function handleSaveCustomer(e) {
     e.preventDefault()
+    
+    const customerPayload = {
+      full_name: newCust.full_name,
+      primary_phone: newCust.primary_phone,
+      address: newCust.address,
+      area_zone: newCust.area_zone,
+      customer_type: newCust.customer_type,
+      custom_metadata: newCust.custom_metadata // Syncs all custom dates & dropdowns seamlessly
+    }
+
     if (editingCustomer) {
-      const { error } = await supabase.from('customers').update(newCust).eq('id', editingCustomer.id)
+      const { error } = await supabase.from('customers').update(customerPayload).eq('id', editingCustomer.id)
       if (!error) { closeCustomerModal(); fetchAllData(); } else { alert('Error updating client: ' + error.message); }
     } else {
-      const { error } = await supabase.from('customers').insert([newCust])
+      const { error } = await supabase.from('customers').insert([customerPayload])
       if (!error) { closeCustomerModal(); fetchAllData(); } else { alert('Error creating client: ' + error.message); }
     }
   }
@@ -85,7 +107,12 @@ export default function App() {
       primary_phone: cust.primary_phone || '',
       address: cust.address || '',
       area_zone: cust.area_zone || 'Zone 1 - Central',
-      customer_type: cust.customer_type || 'Residential'
+      customer_type: cust.customer_type || 'Residential',
+      custom_metadata: cust.custom_metadata || {
+        water_source: 'Borewell',
+        installation_date: '',
+        service_frequency: 'Monthly'
+      }
     })
     setShowCustomerModal(true)
   }
@@ -93,7 +120,18 @@ export default function App() {
   function closeCustomerModal() {
     setShowCustomerModal(false)
     setEditingCustomer(null)
-    setNewCust({ full_name: '', primary_phone: '', address: '', area_zone: 'Zone 1 - Central', customer_type: 'Residential' })
+    setNewCust({ 
+      full_name: '', 
+      primary_phone: '', 
+      address: '', 
+      area_zone: 'Zone 1 - Central', 
+      customer_type: 'Residential',
+      custom_metadata: {
+        water_source: 'Borewell',
+        installation_date: '',
+        service_frequency: 'Monthly'
+      }
+    })
   }
 
   async function handleCreateAsset(e) {
@@ -313,6 +351,27 @@ export default function App() {
                           {c.address || 'No address specified'}
                         </p>
 
+                        {/* Display Custom Fields from JSONB metadata if available */}
+                        {c.custom_metadata && (
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                            {c.custom_metadata.water_source && (
+                              <span style={{ fontSize: '11px', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
+                                Water: {c.custom_metadata.water_source}
+                              </span>
+                            )}
+                            {c.custom_metadata.installation_date && (
+                              <span style={{ fontSize: '11px', background: 'rgba(255, 255, 255, 0.05)', color: '#cbd5e1', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                                Installed: {c.custom_metadata.installation_date}
+                              </span>
+                            )}
+                            {c.custom_metadata.service_frequency && (
+                              <span style={{ fontSize: '11px', background: 'rgba(34, 197, 94, 0.1)', color: '#4ade80', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                                Freq: {c.custom_metadata.service_frequency}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
                         <div style={styles.custActionRow}>
                           <button onClick={() => openEditCustomer(c)} style={styles.actionSubBtn}>Edit Profile</button>
                           <button onClick={() => handleDeleteCustomer(c.id)} style={styles.actionDeleteBtn}>Delete Client</button>
@@ -500,12 +559,65 @@ export default function App() {
               </div>
               <div>
                 <label style={styles.formLabel}>Installation Site Address</label>
-                <textarea value={newCust.address} onChange={e => setNewCust({...newCust, address: e.target.value})} style={{...styles.inputField, height: '70px', resize: 'none'}} placeholder="Apartment name, street, landmark..." />
+                <textarea value={newCust.address} onChange={e => setNewCust({...newCust, address: e.target.value})} style={{...styles.inputField, height: '60px', resize: 'none'}} placeholder="Apartment name, street, landmark..." />
               </div>
               <div>
                 <label style={styles.formLabel}>Assigned Area Zone</label>
                 <input type="text" value={newCust.area_zone} onChange={e => setNewCust({...newCust, area_zone: e.target.value})} style={styles.inputField} placeholder="Zone 1 - Central" />
               </div>
+
+              {/* DYNAMIC CUSTOMIZATION FIELDS (Dates & Dropdowns) */}
+              <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Custom Fields & Metadata</span>
+                
+                <div>
+                  <label style={styles.formLabel}>Water Source (Dropdown)</label>
+                  <select 
+                    value={newCust.custom_metadata?.water_source || 'Borewell'} 
+                    onChange={e => setNewCust({
+                      ...newCust, 
+                      custom_metadata: { ...newCust.custom_metadata, water_source: e.target.value }
+                    })} 
+                    style={styles.inputField}
+                  >
+                    <option value="Borewell">Borewell</option>
+                    <option value="Municipal">Municipal</option>
+                    <option value="Tanker">Tanker</option>
+                    <option value="RO Plant">RO Plant</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={styles.formLabel}>Installation Date</label>
+                  <input 
+                    type="date" 
+                    value={newCust.custom_metadata?.installation_date || ''} 
+                    onChange={e => setNewCust({
+                      ...newCust, 
+                      custom_metadata: { ...newCust.custom_metadata, installation_date: e.target.value }
+                    })} 
+                    style={styles.inputField} 
+                  />
+                </div>
+
+                <div>
+                  <label style={styles.formLabel}>Service Frequency</label>
+                  <select 
+                    value={newCust.custom_metadata?.service_frequency || 'Monthly'} 
+                    onChange={e => setNewCust({
+                      ...newCust, 
+                      custom_metadata: { ...newCust.custom_metadata, service_frequency: e.target.value }
+                    })} 
+                    style={styles.inputField}
+                  >
+                    <option value="Monthly">Monthly</option>
+                    <option value="Quarterly">Quarterly</option>
+                    <option value="Half-Yearly">Half-Yearly</option>
+                    <option value="Yearly">Yearly</option>
+                  </select>
+                </div>
+              </div>
+
               <div style={styles.modalActionRow}>
                 <button type="button" onClick={closeCustomerModal} style={styles.cancelBtn}>Cancel</button>
                 <button type="submit" style={styles.primaryNeonBtn}>{editingCustomer ? 'Save Changes' : 'Initialize Account'}</button>
@@ -739,7 +851,7 @@ const styles = {
   primaryNeonBtn: { backgroundColor: '#0ea5e9', color: '#fff', border: 'none', padding: '12px 22px', borderRadius: '14px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 24px rgba(14, 165, 233, 0.35)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px' },
   cancelBtn: { backgroundColor: 'rgba(255, 255, 255, 0.06)', color: '#cbd5e1', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '10px 18px', borderRadius: '12px', fontWeight: '600', cursor: 'pointer', fontSize: '13.5px' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(3, 7, 18, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
-  modalBox: { backgroundColor: '#090d16', width: '100%', maxWidth: '500px', borderRadius: '24px', padding: '32px', boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5)', border: '1px solid rgba(255, 255, 255, 0.1)' },
+  modalBox: { backgroundColor: '#090d16', width: '100%', maxWidth: '500px', borderRadius: '24px', padding: '32px', boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5)', border: '1px solid rgba(255, 255, 255, 0.1)', maxHeight: '90vh', overflowY: 'auto' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
   modalTitle: { margin: 0, fontSize: '18px', fontWeight: '800', color: '#fff', letterSpacing: '-0.3px' },
   modalCloseBtn: { background: 'transparent', border: 'none', fontSize: '16px', color: '#94a3b8', cursor: 'pointer', fontWeight: '700' },
