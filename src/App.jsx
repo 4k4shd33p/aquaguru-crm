@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
 // Connect to Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'YOUR_SUPABASE_URL'
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_KEY'
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'YOUR_SUPABASE_URL'
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_KEY'
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
 export default function App() {
@@ -37,9 +37,24 @@ export default function App() {
       <header style={{ borderBottom: '1px solid #ccc', paddingBottom: '10px', marginBottom: '20px' }}>
         <h1>AquaGuru CRM (Asset-Based)</h1>
         <nav style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={() => setActiveTab('customers')} style={{ fontWeight: activeTab === 'customers' ? 'bold' : 'normal' }}>Customers & Assets</button>
-          <button onClick={() => setActiveTab('tickets')} style={{ fontWeight: activeTab === 'tickets' ? 'bold' : 'normal' }}>Service Tickets</button>
-          <button onClick={() => setActiveTab('ledger')} style={{ fontWeight: activeTab === 'ledger' ? 'bold' : 'normal' }}>Sales & EMIs</button>
+          <button 
+            onClick={() => setActiveTab('customers')} 
+            style={{ fontWeight: activeTab === 'customers' ? 'bold' : 'normal', padding: '8px 16px', cursor: 'pointer' }}
+          >
+            Customers & Assets
+          </button>
+          <button 
+            onClick={() => setActiveTab('tickets')} 
+            style={{ fontWeight: activeTab === 'tickets' ? 'bold' : 'normal', padding: '8px 16px', cursor: 'pointer' }}
+          >
+            Service Tickets
+          </button>
+          <button 
+            onClick={() => setActiveTab('ledger')} 
+            style={{ fontWeight: activeTab === 'ledger' ? 'bold' : 'normal', padding: '8px 16px', cursor: 'pointer' }}
+          >
+            Sales & EMIs
+          </button>
         </nav>
       </header>
 
