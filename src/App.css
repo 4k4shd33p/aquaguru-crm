@@ -1396,3 +1396,80 @@ tbody tr:hover {
     width: 100%;
   }
 }
+
+/* ===== Phase 4: EMI Breakdown ===== */
+.emi-expanded-row td {
+  padding: 0 !important;
+  border-bottom: 1px solid var(--neutral-200) !important;
+}
+
+.emi-breakdown {
+  padding: 16px 24px 20px;
+}
+
+.emi-breakdown-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--neutral-700);
+  margin-bottom: 12px;
+}
+
+.emi-breakdown-header svg {
+  width: 16px;
+  height: 16px;
+  color: var(--primary-500);
+}
+
+.emi-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--neutral-0);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--neutral-200);
+}
+
+.emi-table th {
+  font-size: 11px;
+  padding: 10px 14px;
+  background: var(--neutral-50);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--neutral-500);
+  font-weight: 600;
+  border-bottom: 1px solid var(--neutral-200);
+}
+
+.emi-table td {
+  padding: 10px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--neutral-100);
+}
+
+.emi-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ===== Phase 4: Inline Edit ===== */
+.inline-edit-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ===== Phase 4: Responsive additions ===== */
+@media (max-width: 900px) {
+  .emi-breakdown {
+    padding: 12px 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  width: 100%;
+  display: block;
+  overflow: auto;
+  white-space: normal;
+  }
+}

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Droplets, Users, Wrench, Package, CreditCard, Search, Plus, X, Menu, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Mail, Phone, MapPin, Trash2, TrendingUp, DollarSign, Clock, ShoppingCart } from 'lucide-react';
+import { Droplets, Users, Wrench, Package, CreditCard, Search, Plus, X, Menu, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Mail, Phone, MapPin, Trash2, TrendingUp, DollarSign, Clock } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import ServiceTicketLog from './ServiceTicketLog';
+import FinancialLedger from './FinancialLedger';
+import ProductCatalog from './ProductCatalog';
 import './App.css';
 
 const TABS = [
@@ -14,12 +16,8 @@ const TABS = [
 const TAB_META = {
   customers: { title: 'Customers', subtitle: 'Manage your customer relationships' },
   tickets: { title: 'Service Tickets', subtitle: 'Track and resolve service requests' },
-  products: { title: 'Product Catalog', subtitle: 'Manage your product inventory' },
-  sales: { title: 'Sales & EMI', subtitle: 'Track sales and EMI payments' },
-};
-
-const SALE_STATUS_LABELS = {
-  completed: 'Completed', emi_active: 'EMI Active', emi_completed: 'EMI Completed',
+  products: { title: 'Product Catalog', subtitle: 'Manage your RO models, parts & inventory' },
+  sales: { title: 'Financial Ledger', subtitle: 'Track sales, EMI collections & outstanding balances' },
 };
 
 export default function App() {
@@ -91,46 +89,10 @@ export default function App() {
     }
   };
 
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm('Delete this product?')) return;
-    try {
-      const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) throw error;
-      showToast('Product deleted');
-      fetchData();
-    } catch (err) {
-      showToast('Failed to delete: ' + err.message, true);
-    }
-  };
-
-  const handleDeleteSale = async (id) => {
-    if (!window.confirm('Delete this sale record?')) return;
-    try {
-      const { error } = await supabase.from('sales').delete().eq('id', id);
-      if (error) throw error;
-      showToast('Sale deleted');
-      fetchData();
-    } catch (err) {
-      showToast('Failed to delete: ' + err.message, true);
-    }
-  };
-
   const filteredCustomers = customers.filter((c) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q) || c.city?.toLowerCase().includes(q);
-  });
-
-  const filteredProducts = products.filter((p) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q);
-  });
-
-  const filteredSales = sales.filter((s) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return s.customer?.name?.toLowerCase().includes(q) || s.product?.name?.toLowerCase().includes(q) || s.status?.toLowerCase().includes(q);
   });
 
   const openTickets = tickets.filter((t) => t.status === 'open').length;
@@ -307,105 +269,18 @@ export default function App() {
               onRefresh={fetchData}
             />
           ) : activeTab === 'products' ? (
-            <div className="card">
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th>Category</th>
-                      <th>Price</th>
-                      <th>Stock</th>
-                      <th style={{ width: 60 }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProducts.length === 0 ? (
-                      <tr><td colSpan={5}>
-                        <div className="table-empty">
-                          <Package />
-                          No products in the catalog yet.
-                        </div>
-                      </td></tr>
-                    ) : filteredProducts.map((p) => (
-                      <tr key={p.id}>
-                        <td style={{ fontWeight: 600, color: 'var(--neutral-900)' }}>{p.name}</td>
-                        <td>{p.category || '—'}</td>
-                        <td style={{ fontWeight: 600 }}>Rs {Number(p.price || 0).toLocaleString('en-IN')}</td>
-                        <td>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: 999,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            background: (p.stock || 0) > 0 ? 'var(--success-50)' : 'var(--error-50)',
-                            color: (p.stock || 0) > 0 ? 'var(--success-700)' : 'var(--error-700)',
-                          }}>
-                            {p.stock || 0} in stock
-                          </span>
-                        </td>
-                        <td>
-                          <button className="btn btn-ghost" onClick={() => handleDeleteProduct(p.id)} title="Delete">
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ProductCatalog
+              showToast={showToast}
+              products={products}
+              onRefresh={fetchData}
+            />
           ) : activeTab === 'sales' ? (
-            <div className="card">
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Customer</th>
-                      <th>Product</th>
-                      <th>Qty</th>
-                      <th>Total</th>
-                      <th>EMI</th>
-                      <th>Status</th>
-                      <th style={{ width: 60 }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredSales.length === 0 ? (
-                      <tr><td colSpan={7}>
-                        <div className="table-empty">
-                          <ShoppingCart />
-                          No sales recorded yet.
-                        </div>
-                      </td></tr>
-                    ) : filteredSales.map((s) => (
-                      <tr key={s.id}>
-                        <td style={{ fontWeight: 600, color: 'var(--neutral-900)' }}>{s.customer?.name || '—'}</td>
-                        <td>{s.product?.name || '—'}</td>
-                        <td>{s.quantity}</td>
-                        <td style={{ fontWeight: 600 }}>Rs {Number(s.total_amount || 0).toLocaleString('en-IN')}</td>
-                        <td>
-                          {s.emi_months > 0 ? (
-                            <span>{s.emi_months} mo / Rs {Number(s.emi_monthly || 0).toLocaleString('en-IN')}/mo</span>
-                          ) : 'Full payment'}
-                        </td>
-                        <td>
-                          <span className={`badge badge-${s.status}`}>
-                            <span className="badge-dot" />
-                            {SALE_STATUS_LABELS[s.status] || s.status}
-                          </span>
-                        </td>
-                        <td>
-                          <button className="btn btn-ghost" onClick={() => handleDeleteSale(s.id)} title="Delete">
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <FinancialLedger
+              showToast={showToast}
+              customers={customers}
+              products={products}
+              onRefresh={fetchData}
+            />
           ) : null}
         </main>
       </div>
