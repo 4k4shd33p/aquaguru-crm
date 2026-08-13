@@ -729,3 +729,670 @@ tbody tr:hover {
     animation: fadeIn 0.2s ease;
   }
 }
+
+/* ===== Phase 3: Filter Tabs ===== */
+.filter-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--neutral-100);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  width: fit-content;
+  flex-wrap: wrap;
+}
+
+.filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--neutral-500);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filter-tab:hover {
+  color: var(--neutral-700);
+}
+
+.filter-tab.active {
+  background: var(--neutral-0);
+  color: var(--primary-600);
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--neutral-200);
+  color: var(--neutral-600);
+}
+
+.filter-tab.active .filter-tab-count {
+  background: var(--primary-50);
+  color: var(--primary-600);
+}
+
+/* ===== Phase 3: Coverage Type Selector ===== */
+.coverage-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.coverage-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border: 2px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.coverage-option:hover {
+  border-color: var(--primary-300);
+  background: var(--primary-50);
+}
+
+.coverage-option.active {
+  border-color: var(--primary-500);
+  background: var(--primary-50);
+}
+
+.coverage-option-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coverage-option-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.coverage-option[data-coverage="warranty"] .coverage-option-icon {
+  background: var(--success-50);
+  color: var(--success-600);
+}
+.coverage-option[data-coverage="amc"] .coverage-option-icon {
+  background: var(--accent-50);
+  color: var(--accent-600);
+}
+.coverage-option[data-coverage="paid_on_demand"] .coverage-option-icon {
+  background: var(--warning-50);
+  color: var(--warning-600);
+}
+
+.coverage-option-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--neutral-700);
+}
+
+.coverage-option.active .coverage-option-label {
+  color: var(--primary-700);
+}
+
+/* ===== Phase 3: Asset Info Card ===== */
+.asset-info {
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.asset-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.asset-info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--neutral-400);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.asset-info-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--neutral-700);
+}
+
+.asset-info-empty {
+  font-size: 13px;
+  color: var(--neutral-400);
+  padding: 4px 0;
+}
+
+/* ===== Phase 3: Parts Picker ===== */
+.parts-section {
+  margin-bottom: 20px;
+}
+
+.parts-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--neutral-800);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.parts-section-title svg {
+  width: 16px;
+  height: 16px;
+  color: var(--primary-500);
+}
+
+.parts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.fitting-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  color: var(--neutral-700);
+}
+
+.fitting-item:hover {
+  border-color: var(--primary-300);
+  background: var(--primary-50);
+}
+
+.fitting-item.checked {
+  border-color: var(--primary-500);
+  background: var(--primary-50);
+  color: var(--primary-700);
+}
+
+.fitting-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--neutral-300);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.fitting-item.checked .fitting-checkbox {
+  background: var(--primary-500);
+  border-color: var(--primary-500);
+}
+
+.fitting-checkbox svg {
+  width: 12px;
+  height: 12px;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.fitting-item.checked .fitting-checkbox svg {
+  opacity: 1;
+}
+
+.fitting-info {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fitting-price {
+  font-size: 12px;
+  color: var(--neutral-500);
+  font-weight: 500;
+}
+
+.fitting-item.checked .fitting-price {
+  color: var(--primary-600);
+}
+
+/* Core parts list */
+.core-parts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.core-part-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  transition: all 0.2s;
+}
+
+.core-part-row:hover {
+  border-color: var(--primary-300);
+}
+
+.core-part-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--neutral-700);
+}
+
+.core-part-price {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--neutral-600);
+  min-width: 80px;
+  text-align: right;
+}
+
+.qty-input {
+  width: 56px;
+  padding: 6px 8px;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--neutral-700);
+  outline: none;
+}
+
+.qty-input:focus {
+  border-color: var(--primary-400);
+  box-shadow: 0 0 0 2px var(--primary-50);
+}
+
+.remove-part-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--error-500);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.remove-part-btn:hover {
+  background: var(--error-50);
+}
+
+.remove-part-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Custom misc item */
+.custom-item-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.custom-item-row .form-input {
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+.custom-item-name {
+  flex: 2;
+}
+
+.custom-item-price {
+  flex: 1;
+  min-width: 90px;
+}
+
+.custom-item-qty {
+  flex: 0 0 56px;
+}
+
+/* ===== Phase 3: Billing Calculator ===== */
+.billing-section {
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-top: 8px;
+}
+
+.billing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 14px;
+  color: var(--neutral-600);
+}
+
+.billing-row.total {
+  border-top: 2px solid var(--neutral-200);
+  margin-top: 8px;
+  padding-top: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--neutral-900);
+}
+
+.billing-row.discount {
+  color: var(--success-600);
+  font-weight: 500;
+}
+
+.billing-row.discount .billing-amount {
+  color: var(--success-600);
+}
+
+.billing-row.coverage-discount {
+  background: var(--success-50);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin: 4px -12px;
+}
+
+.billing-amount {
+  font-weight: 600;
+  color: var(--neutral-800);
+}
+
+.billing-row.total .billing-amount {
+  color: var(--primary-600);
+  font-size: 20px;
+}
+
+.billing-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.billing-input-group .rupee {
+  font-size: 14px;
+  color: var(--neutral-400);
+  font-weight: 600;
+}
+
+.billing-input {
+  width: 100px;
+  padding: 6px 10px;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-sm);
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--neutral-700);
+  outline: none;
+  background: var(--neutral-0);
+}
+
+.billing-input:focus {
+  border-color: var(--primary-400);
+  box-shadow: 0 0 0 2px var(--primary-50);
+}
+
+/* Payment status selector */
+.payment-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.payment-option {
+  padding: 10px 8px;
+  border: 2px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--neutral-600);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.payment-option:hover {
+  border-color: var(--primary-300);
+}
+
+.payment-option.active {
+  border-color: var(--primary-500);
+  background: var(--primary-50);
+  color: var(--primary-700);
+}
+
+.payment-option svg {
+  width: 18px;
+  height: 18px;
+}
+
+.payment-option[data-status="waived"].active {
+  border-color: var(--success-500);
+  background: var(--success-50);
+  color: var(--success-700);
+}
+
+.payment-option[data-status="pending"].active {
+  border-color: var(--warning-500);
+  background: var(--warning-50);
+  color: var(--warning-700);
+}
+
+/* ===== Phase 3: Coverage & Payment Badges ===== */
+.badge-warranty { background: var(--success-50); color: var(--success-700); }
+.badge-warranty .badge-dot { background: var(--success-500); }
+.badge-amc { background: var(--accent-50); color: var(--accent-700); }
+.badge-amc .badge-dot { background: var(--accent-500); }
+.badge-paid_on_demand { background: var(--warning-50); color: var(--warning-700); }
+.badge-paid_on_demand .badge-dot { background: var(--warning-500); }
+
+.badge-paid_on_site { background: var(--success-50); color: var(--success-700); }
+.badge-paid_on_site .badge-dot { background: var(--success-500); }
+.badge-pending { background: var(--warning-50); color: var(--warning-700); }
+.badge-pending .badge-dot { background: var(--warning-500); }
+.badge-waived { background: var(--neutral-100); color: var(--neutral-600); }
+.badge-waived .badge-dot { background: var(--neutral-400); }
+
+/* ===== Phase 3: Wide Modal ===== */
+.modal.modal-wide {
+  max-width: 760px;
+}
+
+.modal-section {
+  margin-bottom: 24px;
+}
+
+.modal-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--neutral-800);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--neutral-100);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-section-title svg {
+  width: 16px;
+  height: 16px;
+  color: var(--primary-500);
+}
+
+/* ===== Phase 3: Ticket Detail ===== */
+.ticket-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+.ticket-detail {
+  background: var(--neutral-0);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+  animation: slideUp 0.25s ease;
+}
+
+.ticket-detail-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--neutral-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.ticket-detail-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--neutral-900);
+  margin-bottom: 4px;
+}
+
+.ticket-detail-id {
+  font-size: 12px;
+  color: var(--neutral-400);
+  font-family: monospace;
+}
+
+.ticket-detail-body {
+  padding: 24px 28px;
+}
+
+.ticket-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--neutral-100);
+}
+
+.ticket-detail-row:last-child {
+  border-bottom: none;
+}
+
+.ticket-detail-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--neutral-500);
+  flex-shrink: 0;
+  margin-right: 16px;
+}
+
+.ticket-detail-value {
+  font-size: 14px;
+  color: var(--neutral-800);
+  text-align: right;
+  font-weight: 500;
+}
+
+.ticket-detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ticket-detail-parts {
+  margin-top: 16px;
+}
+
+.ticket-detail-part {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--neutral-50);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.ticket-detail-part-name {
+  color: var(--neutral-600);
+}
+
+.ticket-detail-part-total {
+  font-weight: 600;
+  color: var(--neutral-800);
+}
+
+/* ===== Phase 3: Responsive ===== */
+@media (max-width: 900px) {
+  .coverage-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-options {
+    grid-template-columns: 1fr;
+  }
+
+  .parts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-item-row {
+    flex-direction: column;
+  }
+
+  .custom-item-row .form-input {
+    width: 100%;
+  }
+
+  .filter-tabs {
+    overflow-x: auto;
+    width: 100%;
+  }
+}

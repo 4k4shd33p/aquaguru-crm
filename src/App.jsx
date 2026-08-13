@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Droplets, Users, Wrench, Package, CreditCard, Search, Plus, X, Menu, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Mail, Phone, MapPin, Trash2, TrendingUp, DollarSign, Clock, ShoppingCart } from 'lucide-react';
 import { supabase } from './lib/supabase';
+import ServiceTicketLog from './ServiceTicketLog';
 import './App.css';
 
 const TABS = [
@@ -16,12 +17,6 @@ const TAB_META = {
   products: { title: 'Product Catalog', subtitle: 'Manage your product inventory' },
   sales: { title: 'Sales & EMI', subtitle: 'Track sales and EMI payments' },
 };
-
-const STATUS_LABELS = {
-  open: 'Open', in_progress: 'In Progress', resolved: 'Resolved', closed: 'Closed',
-};
-
-const PRIORITY_LABELS = { low: 'Low', medium: 'Medium', high: 'High' };
 
 const SALE_STATUS_LABELS = {
   completed: 'Completed', emi_active: 'EMI Active', emi_completed: 'EMI Completed',
@@ -96,18 +91,6 @@ export default function App() {
     }
   };
 
-  const handleDeleteTicket = async (id) => {
-    if (!window.confirm('Delete this service ticket?')) return;
-    try {
-      const { error } = await supabase.from('service_tickets').delete().eq('id', id);
-      if (error) throw error;
-      showToast('Ticket deleted');
-      fetchData();
-    } catch (err) {
-      showToast('Failed to delete: ' + err.message, true);
-    }
-  };
-
   const handleDeleteProduct = async (id) => {
     if (!window.confirm('Delete this product?')) return;
     try {
@@ -136,12 +119,6 @@ export default function App() {
     if (!search) return true;
     const q = search.toLowerCase();
     return c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q) || c.city?.toLowerCase().includes(q);
-  });
-
-  const filteredTickets = tickets.filter((t) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return t.issue?.toLowerCase().includes(q) || t.customer?.name?.toLowerCase().includes(q) || t.status?.toLowerCase().includes(q);
   });
 
   const filteredProducts = products.filter((p) => {
@@ -323,55 +300,12 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'tickets' ? (
-            <div className="card">
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Customer</th>
-                      <th>Issue</th>
-                      <th>Product</th>
-                      <th>Priority</th>
-                      <th>Status</th>
-                      <th style={{ width: 60 }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTickets.length === 0 ? (
-                      <tr><td colSpan={6}>
-                        <div className="table-empty">
-                          <Wrench />
-                          No service tickets found.
-                        </div>
-                      </td></tr>
-                    ) : filteredTickets.map((t) => (
-                      <tr key={t.id}>
-                        <td style={{ fontWeight: 600, color: 'var(--neutral-900)' }}>{t.customer?.name || '—'}</td>
-                        <td style={{ maxWidth: 240 }}>{t.issue}</td>
-                        <td>{t.product?.name || '—'}</td>
-                        <td>
-                          <span className={`badge badge-${t.priority}`}>
-                            <span className="badge-dot" />
-                            {PRIORITY_LABELS[t.priority] || t.priority}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge badge-${t.status}`}>
-                            <span className="badge-dot" />
-                            {STATUS_LABELS[t.status] || t.status}
-                          </span>
-                        </td>
-                        <td>
-                          <button className="btn btn-ghost" onClick={() => handleDeleteTicket(t.id)} title="Delete">
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ServiceTicketLog
+              showToast={showToast}
+              customers={customers}
+              products={products}
+              onRefresh={fetchData}
+            />
           ) : activeTab === 'products' ? (
             <div className="card">
               <div className="table-wrap">
