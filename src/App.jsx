@@ -17,6 +17,9 @@ export default function App() {
   const [showCustomerModal, setShowCustomerModal] = useState(false)
   const [showAssetModal, setShowAssetModal] = useState(false)
   const [showTicketModal, setShowTicketModal] = useState(false)
+  
+  // Editing States
+  const [editingCustomer, setEditingCustomer] = useState(null)
   const [selectedCustomerForAsset, setSelectedCustomerForAsset] = useState(null)
   const [selectedAssetForTicket, setSelectedAssetForTicket] = useState(null)
 
@@ -55,16 +58,59 @@ export default function App() {
     setLoading(false)
   }
 
-  async function handleCreateCustomer(e) {
+  async function handleSaveCustomer(e) {
     e.preventDefault()
-    const { error } = await supabase.from('customers').insert([newCust])
+    if (editingCustomer) {
+      // Update existing
+      const { error } = await supabase
+        .from('customers')
+        .update(newCust)
+        .eq('id', editingCustomer.id)
+      
+      if (!error) {
+        closeCustomerModal()
+        fetchAllData()
+      } else {
+        alert('Error updating customer: ' + error.message)
+      }
+    } else {
+      // Create new
+      const { error } = await supabase.from('customers').insert([newCust])
+      if (!error) {
+        closeCustomerModal()
+        fetchAllData()
+      } else {
+        alert('Error creating customer: ' + error.message)
+      }
+    }
+  }
+
+  async function handleDeleteCustomer(id) {
+    if (!window.confirm('Are you sure you want to delete this customer and their linked records?')) return
+    const { error } = await supabase.from('customers').delete().eq('id', id)
     if (!error) {
-      setShowCustomerModal(false)
-      setNewCust({ full_name: '', primary_phone: '', address: '', area_zone: 'Zone 1', customer_type: 'Residential' })
       fetchAllData()
     } else {
-      alert('Error creating customer: ' + error.message)
+      alert('Error deleting customer: ' + error.message)
     }
+  }
+
+  function openEditCustomer(cust) {
+    setEditingCustomer(cust)
+    setNewCust({
+      full_name: cust.full_name || '',
+      primary_phone: cust.primary_phone || '',
+      address: cust.address || '',
+      area_zone: cust.area_zone || 'Zone 1',
+      customer_type: cust.customer_type || 'Residential'
+    })
+    setShowCustomerModal(true)
+  }
+
+  function closeCustomerModal() {
+    setShowCustomerModal(false)
+    setEditingCustomer(null)
+    setNewCust({ full_name: '', primary_phone: '', address: '', area_zone: 'Zone 1', customer_type: 'Residential' })
   }
 
   async function handleCreateAsset(e) {
@@ -83,6 +129,16 @@ export default function App() {
     }
   }
 
+  async function handleDeleteAsset(assetId) {
+    if (!window.confirm('Are you sure you want to delete this machine asset?')) return
+    const { error } = await supabase.from('assets').delete().eq('id', assetId)
+    if (!error) {
+      fetchAllData()
+    } else {
+      alert('Error deleting asset: ' + error.message)
+    }
+  }
+
   async function handleCreateTicket(e) {
     e.preventDefault()
     if (!selectedAssetForTicket) return
@@ -96,6 +152,16 @@ export default function App() {
       fetchAllData()
     } else {
       alert('Error logging ticket: ' + error.message)
+    }
+  }
+
+  async function handleDeleteTicket(ticketId) {
+    if (!window.confirm('Are you sure you want to delete this service ticket?')) return
+    const { error } = await supabase.from('service_tickets').delete().eq('id', ticketId)
+    if (!error) {
+      fetchAllData()
+    } else {
+      alert('Error deleting ticket: ' + error.message)
     }
   }
 
@@ -116,7 +182,7 @@ export default function App() {
           <div style={styles.logoBadge}>💧</div>
           <div>
             <h2 style={styles.brandTitle}>AquaGuru</h2>
-            <span style={styles.brandSubtitle}>Asset CRM v2.4</span>
+            <span style={styles.brandSubtitle}>Asset CRM v2.5</span>
           </div>
         </div>
 
@@ -235,9 +301,16 @@ export default function App() {
                             <h3 style={styles.custName}>{c.full_name}</h3>
                             <span style={styles.phoneTag}>📞 {c.primary_phone || 'N/A'}</span>
                           </div>
-                          <span style={styles.zonePill}>{c.area_zone || 'Zone 1'}</span>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <span style={styles.zonePill}>{c.area_zone || 'Zone 1'}</span>
+                          </div>
                         </div>
                         <p style={styles.addressLine}>📍 {c.address || 'No address specified'}</p>
+
+                        <div style={styles.custActionRow}>
+                          <button onClick={() => openEditCustomer(c)} style={styles.editCustBtn}>Edit Customer</button>
+                          <button onClick={() => handleDeleteCustomer(c.id)} style={styles.deleteCustBtn}>Delete</button>
+                        </div>
 
                         <div style={styles.machineSection}>
                           <div style={styles.machineHeaderRow}>
@@ -266,6 +339,13 @@ export default function App() {
                                     style={styles.visitBtn}
                                   >
                                     Log Visit
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDeleteAsset(asset.id)}
+                                    style={styles.deleteAssetBtn}
+                                    title="Delete Machine"
+                                  >
+                                    ✕
                                   </button>
                                 </div>
                               </div>
@@ -296,6 +376,7 @@ export default function App() {
                           <th style={styles.th}>Parts Cost</th>
                           <th style={styles.th}>Tech Fee</th>
                           <th style={styles.th}>Collected</th>
+                          <th style={styles.th}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -311,6 +392,9 @@ export default function App() {
                             <td style={styles.td}>₹{t.internal_parts_cost || 0}</td>
                             <td style={styles.td}>₹{t.technician_payout_fee || 0}</td>
                             <td style={styles.td}><strong>₹{t.amount_collected_on_site || 0}</strong> ({t.payment_mode})</td>
+                            <td style={styles.td}>
+                              <button onClick={() => handleDeleteTicket(t.id)} style={styles.tableDeleteBtn}>Delete</button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -330,12 +414,12 @@ export default function App() {
         )}
       </main>
 
-      {/* Modal: Add Customer */}
+      {/* Modal: Add/Edit Customer */}
       {showCustomerModal && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalBox}>
-            <h3>Add New Customer Account</h3>
-            <form onSubmit={handleCreateCustomer} style={styles.formGrid}>
+            <h3>{editingCustomer ? 'Edit Customer Account' : 'Add New Customer Account'}</h3>
+            <form onSubmit={handleSaveCustomer} style={styles.formGrid}>
               <label style={styles.formLabel}>Full Name</label>
               <input type="text" required value={newCust.full_name} onChange={e => setNewCust({...newCust, full_name: e.target.value})} style={styles.inputField} />
               
@@ -349,8 +433,8 @@ export default function App() {
               <input type="text" value={newCust.area_zone} onChange={e => setNewCust({...newCust, area_zone: e.target.value})} style={styles.inputField} />
 
               <div style={styles.modalActionRow}>
-                <button type="button" onClick={() => setShowCustomerModal(false)} style={styles.cancelBtn}>Cancel</button>
-                <button type="submit" style={styles.primaryBtn}>Save Customer</button>
+                <button type="button" onClick={closeCustomerModal} style={styles.cancelBtn}>Cancel</button>
+                <button type="submit" style={styles.primaryBtn}>{editingCustomer ? 'Update Customer' : 'Save Customer'}</button>
               </div>
             </form>
           </div>
@@ -486,7 +570,10 @@ const styles = {
   custName: { margin: 0, fontSize: '17px', fontWeight: '700', color: '#0f172a' },
   phoneTag: { fontSize: '13px', color: '#0284c7', fontWeight: '600' },
   zonePill: { backgroundColor: '#e0f2fe', color: '#0369a1', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' },
-  addressLine: { fontSize: '13px', color: '#64748b', margin: '8px 0 16px 0' },
+  addressLine: { fontSize: '13px', color: '#64748b', margin: '8px 0 12px 0' },
+  custActionRow: { display: 'flex', gap: '8px', marginBottom: '14px' },
+  editCustBtn: { background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#334155', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
+  deleteCustBtn: { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
   machineSection: { borderTop: '1px solid #f1f5f9', paddingTop: '12px' },
   machineHeaderRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
   machineTitle: { fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', margin: 0 },
@@ -494,9 +581,10 @@ const styles = {
   noMachineText: { fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', margin: '4px 0' },
   machineRow: { backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '8px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #e2e8f0', fontSize: '13px' },
   serialSub: { fontSize: '11px', color: '#64748b', marginTop: '2px' },
-  machineRowRight: { display: 'flex', alignItems: 'center', gap: '8px' },
+  machineRowRight: { display: 'flex', alignItems: 'center', gap: '6px' },
   gpdPill: { backgroundColor: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' },
   visitBtn: { backgroundColor: '#0284c7', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
+  deleteAssetBtn: { background: '#fee2e2', color: '#dc2626', border: 'none', width: '22px', height: '22px', borderRadius: '4px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   tableCard: { backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' },
   tableHeading: { padding: '20px', margin: 0, fontSize: '16px', fontWeight: '700', borderBottom: '1px solid #e2e8f0' },
   table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' },
@@ -504,6 +592,7 @@ const styles = {
   tr: { borderBottom: '1px solid #f1f5f9' },
   td: { padding: '12px 16px', color: '#334155' },
   tagBadge: { backgroundColor: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: '600' },
+  tableDeleteBtn: { background: '#fee2e2', color: '#dc2626', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   primaryBtn: { backgroundColor: '#0284c7', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)' },
   cancelBtn: { backgroundColor: '#e2e8f0', color: '#334155', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
