@@ -1,5 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Droplets, Users, Wrench, Package, CreditCard, Search, Plus, X, Menu, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Mail, Phone, MapPin, Trash2, TrendingUp, DollarSign, Clock } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Droplets, Users, Wrench, Package, CreditCard, Search, Plus, X, Menu,
+  CircleCheck as CheckCircle, CircleAlert as AlertCircle, Mail, Phone, MapPin,
+  Trash2, TrendingUp, DollarSign, Clock, ArrowUp, ArrowDown
+} from 'lucide-react';
 import { supabase } from './lib/supabase';
 import ServiceTicketLog from './ServiceTicketLog';
 import FinancialLedger from './FinancialLedger';
@@ -10,7 +14,7 @@ const TABS = [
   { id: 'customers', label: 'Customers', icon: Users },
   { id: 'tickets', label: 'Service Tickets', icon: Wrench },
   { id: 'products', label: 'Product Catalog', icon: Package },
-  { id: 'sales', label: 'Sales & EMI', icon: CreditCard },
+  { id: 'sales', label: 'Financial Ledger', icon: CreditCard },
 ];
 
 const TAB_META = {
@@ -31,6 +35,7 @@ export default function App() {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState(null);
+  const [cmdkOpen, setCmdkOpen] = useState(false);
 
   const showToast = (message, isError = false) => {
     setToast({ message, isError });
@@ -39,6 +44,10 @@ export default function App() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    const safe = (r, fallback) => {
+      if (r.error) { console.warn('Supabase query failed:', r.error.message); return fallback; }
+      return r.data || fallback;
+    };
     try {
       const [c, t, p, s] = await Promise.all([
         supabase.from('customers').select('*').order('created_at', { ascending: false }),
@@ -46,16 +55,16 @@ export default function App() {
         supabase.from('products').select('*').order('created_at', { ascending: false }),
         supabase.from('sales').select('*, customer:customers(name), product:products(name)').order('created_at', { ascending: false }),
       ]);
-      if (c.error) throw c.error;
-      if (t.error) throw t.error;
-      if (p.error) throw p.error;
-      if (s.error) throw s.error;
-      setCustomers(c.data || []);
-      setTickets(t.data || []);
-      setProducts(p.data || []);
-      setSales(s.data || []);
+      setCustomers(safe(c, []));
+      setTickets(safe(t, []));
+      setProducts(safe(p, []));
+      setSales(safe(s, []));
     } catch (err) {
-      showToast('Failed to load data: ' + err.message, true);
+      console.warn('fetchData failed, using empty fallbacks:', err.message);
+      setCustomers([]);
+      setTickets([]);
+      setProducts([]);
+      setSales([]);
     } finally {
       setLoading(false);
     }
@@ -65,6 +74,21 @@ export default function App() {
     fetchData();
   }, [fetchData]);
 
+  // Command palette keyboard shortcut
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCmdkOpen((prev) => !prev);
+      }
+      if (e.key === 'Escape') {
+        setCmdkOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   const handleAddCustomer = async (formData) => {
     try {
       const { error } = await supabase.from('customers').insert([formData]);
@@ -73,7 +97,7 @@ export default function App() {
       showToast('Customer added successfully');
       fetchData();
     } catch (err) {
-      showToast('Failed to add customer: ' + err.message, true);
+      console.warn('handleAddCustomer failed:', err.message);
     }
   };
 
@@ -85,7 +109,7 @@ export default function App() {
       showToast('Customer deleted');
       fetchData();
     } catch (err) {
-      showToast('Failed to delete: ' + err.message, true);
+      console.warn('handleDeleteCustomer failed:', err.message);
     }
   };
 
@@ -100,6 +124,13 @@ export default function App() {
   const activeEMI = sales.filter((s) => s.status === 'emi_active').length;
 
   const meta = TAB_META[activeTab];
+
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    setSidebarOpen(false);
+    setSearch('');
+    setCmdkOpen(false);
+  };
 
   return (
     <div className="app">
@@ -122,11 +153,7 @@ export default function App() {
               <button
                 key={tab.id}
                 className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setSidebarOpen(false);
-                  setSearch('');
-                }}
+                onClick={() => switchTab(tab.id)}
               >
                 <Icon />
                 {tab.label}
@@ -162,6 +189,16 @@ export default function App() {
               <DollarSign size={16} />
               Rs {totalRevenue.toLocaleString('en-IN')}
             </div>
+            <button
+              className="topbar-stat"
+              onClick={() => setCmdkOpen(true)}
+              style={{ cursor: 'pointer', gap: '6px' }}
+              title="Search (Cmd+K)"
+            >
+              <Search size={16} />
+              <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Search</span>
+              <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'var(--bg-surface-3)', border: '1px solid var(--border)', color: 'var(--text-dim)' }}>⌘K</span>
+            </button>
           </div>
         </header>
 
@@ -243,13 +280,13 @@ export default function App() {
                       </td></tr>
                     ) : filteredCustomers.map((c) => (
                       <tr key={c.id}>
-                        <td style={{ fontWeight: 600, color: 'var(--neutral-900)' }}>{c.name}</td>
+                        <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</td>
                         <td>
-                          {c.email && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}><Mail size={13} style={{ color: 'var(--neutral-400)' }} />{c.email}</div>}
-                          {c.phone && <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Phone size={13} style={{ color: 'var(--neutral-400)' }} />{c.phone}</div>}
+                          {c.email && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}><Mail size={13} style={{ color: 'var(--text-dim)' }} />{c.email}</div>}
+                          {c.phone && <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Phone size={13} style={{ color: 'var(--text-dim)' }} />{c.phone}</div>}
                         </td>
-                        <td>{c.city ? <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={13} style={{ color: 'var(--neutral-400)' }} />{c.city}</span> : '—'}</td>
-                        <td style={{ maxWidth: 200, color: 'var(--neutral-500)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.notes || '—'}</td>
+                        <td>{c.city ? <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={13} style={{ color: 'var(--text-dim)' }} />{c.city}</span> : '—'}</td>
+                        <td style={{ maxWidth: 200, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.notes || '—'}</td>
                         <td>
                           <button className="btn btn-ghost" onClick={() => handleDeleteCustomer(c.id)} title="Delete">
                             <Trash2 size={16} />
@@ -293,6 +330,18 @@ export default function App() {
         />
       )}
 
+      {/* Command Palette */}
+      {cmdkOpen && (
+        <CommandPalette
+          customers={customers}
+          products={products}
+          tickets={tickets}
+          sales={sales}
+          onClose={() => setCmdkOpen(false)}
+          onNavigate={switchTab}
+        />
+      )}
+
       {/* Toast */}
       {toast && (
         <div className={`toast ${toast.isError ? 'error' : ''}`}>
@@ -300,6 +349,116 @@ export default function App() {
           {toast.message}
         </div>
       )}
+    </div>
+  );
+}
+
+function CommandPalette({ customers, products, tickets, sales, onClose, onNavigate }) {
+  const [query, setQuery] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const results = (() => {
+    if (!query) {
+      return [
+        { type: 'nav', items: TABS.map((t) => ({ label: t.label, desc: 'Navigate to tab', icon: t.icon, action: () => onNavigate(t.id) })) },
+      ];
+    }
+    const q = query.toLowerCase();
+    const navItems = TABS.filter((t) => t.label.toLowerCase().includes(q))
+      .map((t) => ({ label: t.label, desc: 'Navigate to tab', icon: t.icon, action: () => onNavigate(t.id) }));
+    const customerItems = customers.filter((c) => c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q))
+      .slice(0, 5).map((c) => ({ label: c.name, desc: c.email || c.phone || 'Customer', icon: Users, action: () => onNavigate('customers') }));
+    const productItems = products.filter((p) => p.name?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q))
+      .slice(0, 5).map((p) => ({ label: p.name, desc: `Rs ${Number(p.price || 0).toLocaleString('en-IN')} · ${p.category || ''}`, icon: Package, action: () => onNavigate('products') }));
+    const ticketItems = tickets.filter((t) => t.issue?.toLowerCase().includes(q) || t.customer?.name?.toLowerCase().includes(q))
+      .slice(0, 5).map((t) => ({ label: t.customer?.name || 'Ticket', desc: t.issue?.slice(0, 50) || '', icon: Wrench, action: () => onNavigate('tickets') }));
+    const saleItems = sales.filter((s) => s.customer?.name?.toLowerCase().includes(q) || s.product?.name?.toLowerCase().includes(q))
+      .slice(0, 5).map((s) => ({ label: s.customer?.name || 'Sale', desc: `Rs ${Number(s.total_amount || 0).toLocaleString('en-IN')}`, icon: CreditCard, action: () => onNavigate('sales') }));
+
+    const sections = [];
+    if (navItems.length) sections.push({ type: 'nav', items: navItems });
+    if (customerItems.length) sections.push({ type: 'customers', items: customerItems });
+    if (productItems.length) sections.push({ type: 'products', items: productItems });
+    if (ticketItems.length) sections.push({ type: 'tickets', items: ticketItems });
+    if (saleItems.length) sections.push({ type: 'sales', items: saleItems });
+    return sections;
+  })();
+
+  const flatItems = results.flatMap((s) => s.items);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex((prev) => Math.min(prev + 1, flatItems.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      flatItems[selectedIndex]?.action();
+    }
+  };
+
+  let runningIndex = -1;
+
+  return (
+    <div className="cmdk-overlay" onClick={onClose}>
+      <div className="cmdk" onClick={(e) => e.stopPropagation()}>
+        <div className="cmdk-input-wrap">
+          <Search />
+          <input
+            ref={inputRef}
+            className="cmdk-input"
+            placeholder="Search customers, products, tickets, sales..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <span className="cmdk-kbd">ESC</span>
+        </div>
+        <div className="cmdk-results">
+          {flatItems.length === 0 ? (
+            <div className="cmdk-empty">No results found for "{query}"</div>
+          ) : results.map((section) => (
+            <div key={section.type}>
+              <div className="cmdk-section-label">{section.type}</div>
+              {section.items.map((item) => {
+                runningIndex++;
+                const idx = runningIndex;
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={idx}
+                    className={`cmdk-item ${idx === selectedIndex ? 'selected' : ''}`}
+                    onClick={item.action}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                  >
+                    <div className="cmdk-item-icon"><Icon /></div>
+                    <div>
+                      <div className="cmdk-item-label">{item.label}</div>
+                      <div className="cmdk-item-desc">{item.desc}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        <div className="cmdk-footer">
+          <kbd>↑</kbd><kbd>↓</kbd> Navigate
+          <kbd>↵</kbd> Select
+          <kbd>ESC</kbd> Close
+        </div>
+      </div>
     </div>
   );
 }

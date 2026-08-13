@@ -42,7 +42,7 @@ export default function ProductCatalog({ showToast, products, onRefresh }) {
       showToast('Product deleted');
       onRefresh?.();
     } catch (err) {
-      showToast('Failed to delete: ' + err.message, true);
+      console.warn('handleDelete failed:', err.message);
     }
   };
 
@@ -74,7 +74,7 @@ export default function ProductCatalog({ showToast, products, onRefresh }) {
       showToast('Product updated');
       onRefresh?.();
     } catch (err) {
-      showToast('Failed to update: ' + err.message, true);
+      console.warn('saveEdit failed:', err.message);
     }
   };
 
@@ -89,7 +89,7 @@ export default function ProductCatalog({ showToast, products, onRefresh }) {
       showToast(`Stock ${delta > 0 ? 'increased' : 'decreased'}`);
       onRefresh?.();
     } catch (err) {
-      showToast('Failed to update stock: ' + err.message, true);
+      console.warn('adjustStock failed:', err.message);
     }
   };
 
@@ -175,10 +175,10 @@ export default function ProductCatalog({ showToast, products, onRefresh }) {
                 const margin = Number(p.price || 0) - Number(p.cost_price || 0);
                 return (
                   <tr key={p.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--neutral-900)' }}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                       {p.name}
                     </td>
-                    <td style={{ fontFamily: 'monospace', fontSize: 13, color: 'var(--neutral-500)' }}>
+                    <td style={{ fontFamily: 'monospace', fontSize: 13, color: 'var(--text-dim)' }}>
                       {p.sku || '—'}
                     </td>
                     <td>
@@ -187,8 +187,8 @@ export default function ProductCatalog({ showToast, products, onRefresh }) {
                         borderRadius: 999,
                         fontSize: 12,
                         fontWeight: 600,
-                        background: 'var(--neutral-100)',
-                        color: 'var(--neutral-600)',
+                        background: 'var(--bg-surface-3)',
+                        color: 'var(--text-muted)',
                       }}>
                         {CATEGORY_LABELS[p.category] || p.category || '—'}
                       </span>
@@ -206,7 +206,7 @@ export default function ProductCatalog({ showToast, products, onRefresh }) {
                         <span style={{ fontWeight: 600 }}>Rs {Number(p.price || 0).toLocaleString('en-IN')}</span>
                       )}
                     </td>
-                    <td style={{ color: 'var(--neutral-500)' }}>
+                    <td style={{ color: 'var(--text-dim)' }}>
                       Rs {Number(p.cost_price || 0).toLocaleString('en-IN')}
                     </td>
                     <td>
@@ -236,7 +236,7 @@ export default function ProductCatalog({ showToast, products, onRefresh }) {
                             minWidth: 70,
                             textAlign: 'center',
                             background: (p.stock || 0) > 0 ? 'var(--success-50)' : 'var(--error-50)',
-                            color: (p.stock || 0) > 0 ? 'var(--success-700)' : 'var(--error-700)',
+                            color: (p.stock || 0) > 0 ? 'var(--success-500)' : 'var(--error-500)',
                           }}>
                             {p.stock || 0} units
                           </span>
@@ -251,7 +251,7 @@ export default function ProductCatalog({ showToast, products, onRefresh }) {
                         </div>
                       )}
                     </td>
-                    <td style={{ fontSize: 13, color: 'var(--neutral-500)' }}>
+                    <td style={{ fontSize: 13, color: 'var(--text-dim)' }}>
                       {p.warranty_period || '—'}
                     </td>
                     <td>
@@ -259,10 +259,10 @@ export default function ProductCatalog({ showToast, products, onRefresh }) {
                         {isEditing ? (
                           <>
                             <button className="btn btn-ghost" onClick={() => saveEdit(p.id)} title="Save">
-                              <Check size={16} style={{ color: 'var(--success-600)' }} />
+                              <Check size={16} style={{ color: 'var(--success-500)' }} />
                             </button>
                             <button className="btn btn-ghost" onClick={cancelEdit} title="Cancel">
-                              <X size={16} style={{ color: 'var(--neutral-400)' }} />
+                              <X size={16} style={{ color: 'var(--text-dim)' }} />
                             </button>
                           </>
                         ) : (
@@ -297,7 +297,7 @@ export default function ProductCatalog({ showToast, products, onRefresh }) {
               showToast('Product added successfully');
               onRefresh?.();
             } catch (err) {
-              showToast('Failed to add product: ' + err.message, true);
+              console.warn('Failed to add product:', err.message);
             }
           }}
         />

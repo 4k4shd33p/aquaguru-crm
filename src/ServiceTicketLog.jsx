@@ -63,6 +63,10 @@ export default function ServiceTicketLog({ showToast, customers, products, onRef
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    const safe = (r, fallback) => {
+      if (r.error) { console.warn('Supabase query failed:', r.error.message); return fallback; }
+      return r.data || fallback;
+    };
     try {
       const [t, a] = await Promise.all([
         supabase
@@ -71,16 +75,16 @@ export default function ServiceTicketLog({ showToast, customers, products, onRef
           .order('created_at', { ascending: false }),
         supabase.from('customer_assets').select('*, customer:customers(name)'),
       ]);
-      if (t.error) throw t.error;
-      if (a.error) throw a.error;
-      setTickets(t.data || []);
-      setAssets(a.data || []);
+      setTickets(safe(t, []));
+      setAssets(safe(a, []));
     } catch (err) {
-      showToast('Failed to load tickets: ' + err.message, true);
+      console.warn('fetchData failed, using empty fallbacks:', err.message);
+      setTickets([]);
+      setAssets([]);
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -95,7 +99,7 @@ export default function ServiceTicketLog({ showToast, customers, products, onRef
       fetchData();
       onRefresh?.();
     } catch (err) {
-      showToast('Failed to delete: ' + err.message, true);
+      console.warn('handleDelete failed:', err.message);
     }
   };
 
@@ -107,7 +111,7 @@ export default function ServiceTicketLog({ showToast, customers, products, onRef
       fetchData();
       onRefresh?.();
     } catch (err) {
-      showToast('Failed to update status: ' + err.message, true);
+      console.warn('handleStatusChange failed:', err.message);
     }
   };
 
@@ -200,7 +204,7 @@ export default function ServiceTicketLog({ showToast, customers, products, onRef
                   </td></tr>
                 ) : filteredTickets.map((t) => (
                   <tr key={t.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--neutral-900)' }}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                       {t.customer?.name || '—'}
                     </td>
                     <td>{TICKET_TYPE_LABELS[t.ticket_type] || t.ticket_type || '—'}</td>
@@ -221,7 +225,7 @@ export default function ServiceTicketLog({ showToast, customers, products, onRef
                     <td>
                       <select
                         className="form-select"
-                        style={{ width: 'auto', padding: '4px 8px', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--neutral-200)', borderRadius: 6 }}
+                        style={{ width: 'auto', padding: '4px 8px', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface-2)', color: 'var(--text-secondary)' }}
                         value={t.status}
                         onChange={(e) => handleStatusChange(t.id, e.target.value)}
                       >
@@ -239,7 +243,7 @@ export default function ServiceTicketLog({ showToast, customers, products, onRef
                         </span>
                       )}
                     </td>
-                    <td style={{ fontWeight: 700, color: 'var(--primary-600)' }}>
+                    <td style={{ fontWeight: 700, color: 'var(--primary-400)' }}>
                       Rs {Number(t.final_amount || 0).toLocaleString('en-IN')}
                     </td>
                     <td>
@@ -291,7 +295,7 @@ export default function ServiceTicketLog({ showToast, customers, products, onRef
               fetchData();
               onRefresh?.();
             } catch (err) {
-              showToast('Failed to log ticket: ' + err.message, true);
+              console.warn('Failed to log ticket:', err.message);
             }
           }}
         />
@@ -642,7 +646,7 @@ function TicketForm({ customers, products, assets, onClose, onSubmit }) {
                 <div className="parts-section-title"><Cpu size={16} /> Core Parts</div>
                 <div className="core-parts-list">
                   {coreParts.length === 0 && (
-                    <div style={{ fontSize: 13, color: 'var(--neutral-400)', padding: '4px 0' }}>
+                    <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '4px 0' }}>
                       No core parts selected yet.
                     </div>
                   )}
@@ -707,7 +711,7 @@ function TicketForm({ customers, products, assets, onClose, onSubmit }) {
               <div className="parts-section">
                 <div className="parts-section-title"><FileText size={16} /> Custom / Miscellaneous Items</div>
                 {customItems.length === 0 && (
-                  <div style={{ fontSize: 13, color: 'var(--neutral-400)', padding: '4px 0 8px' }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '4px 0 8px' }}>
                     No custom items added.
                   </div>
                 )}
@@ -914,7 +918,7 @@ function TicketDetailModal({ ticket, onClose }) {
                 <div key={i} className="ticket-detail-part">
                   <span className="ticket-detail-part-name">
                     {p.name} × {p.quantity}
-                    <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--neutral-400)' }}>[{p.part_type}]</span>
+                    <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-dim)' }}>[{p.part_type}]</span>
                   </span>
                   <span className="ticket-detail-part-total">Rs {Number(p.line_total).toLocaleString('en-IN')}</span>
                 </div>

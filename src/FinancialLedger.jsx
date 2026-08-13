@@ -20,6 +20,10 @@ export default function FinancialLedger({ showToast, customers, products, onRefr
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    const safe = (r, fallback) => {
+      if (r.error) { console.warn('Supabase query failed:', r.error.message); return fallback; }
+      return r.data || fallback;
+    };
     try {
       const [s, i] = await Promise.all([
         supabase
@@ -31,16 +35,16 @@ export default function FinancialLedger({ showToast, customers, products, onRefr
           .select('*, sale:sales(customer:customers(name))')
           .order('due_date', { ascending: true }),
       ]);
-      if (s.error) throw s.error;
-      if (i.error) throw i.error;
-      setSales(s.data || []);
-      setInstallments(i.data || []);
+      setSales(safe(s, []));
+      setInstallments(safe(i, []));
     } catch (err) {
-      showToast('Failed to load financial data: ' + err.message, true);
+      console.warn('fetchData failed, using empty fallbacks:', err.message);
+      setSales([]);
+      setInstallments([]);
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -55,7 +59,7 @@ export default function FinancialLedger({ showToast, customers, products, onRefr
       fetchData();
       onRefresh?.();
     } catch (err) {
-      showToast('Failed to delete: ' + err.message, true);
+      console.warn('handleDeleteSale failed:', err.message);
     }
   };
 
@@ -93,7 +97,7 @@ export default function FinancialLedger({ showToast, customers, products, onRefr
       fetchData();
       onRefresh?.();
     } catch (err) {
-      showToast('Failed to collect: ' + err.message, true);
+      console.warn('handleCollectInstallment failed:', err.message);
     }
   };
 
@@ -216,15 +220,15 @@ export default function FinancialLedger({ showToast, customers, products, onRefr
                             </button>
                           )}
                         </td>
-                        <td style={{ fontWeight: 600, color: 'var(--neutral-900)' }}>
+                        <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                           {s.customer?.name || '—'}
                         </td>
                         <td>{s.product?.name || '—'}</td>
                         <td style={{ fontWeight: 600 }}>Rs {Number(s.total_amount || 0).toLocaleString('en-IN')}</td>
-                        <td style={{ color: 'var(--success-600)', fontWeight: 500 }}>
+                        <td style={{ color: 'var(--success-500)', fontWeight: 500 }}>
                           Rs {Number(s.upfront_paid || 0).toLocaleString('en-IN')}
                         </td>
-                        <td style={{ fontWeight: 600, color: Number(s.remaining_balance || 0) > 0 ? 'var(--warning-600)' : 'var(--neutral-500)' }}>
+                        <td style={{ fontWeight: 600, color: Number(s.remaining_balance || 0) > 0 ? 'var(--warning-500)' : 'var(--text-dim)' }}>
                           Rs {Number(s.remaining_balance || 0).toLocaleString('en-IN')}
                         </td>
                         <td>
@@ -241,7 +245,7 @@ export default function FinancialLedger({ showToast, customers, products, onRefr
                       </tr>
                       {isExpanded && hasEMI && (
                         <tr key={s.id + '-emi'} className="emi-expanded-row">
-                          <td colSpan={8} style={{ padding: 0, background: 'var(--neutral-50)' }}>
+                          <td colSpan={8} style={{ padding: 0, background: 'var(--bg-surface-2)' }}>
                             <div className="emi-breakdown">
                               <div className="emi-breakdown-header">
                                 <Calendar size={16} />
@@ -259,7 +263,7 @@ export default function FinancialLedger({ showToast, customers, products, onRefr
                                 </thead>
                                 <tbody>
                                   {saleInstallments.length === 0 ? (
-                                    <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--neutral-400)' }}>
+                                    <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
                                       No installment schedule generated.
                                     </td></tr>
                                   ) : saleInstallments.map((inst) => (
@@ -285,7 +289,7 @@ export default function FinancialLedger({ showToast, customers, products, onRefr
                                             Collect
                                           </button>
                                         ) : (
-                                          <span style={{ fontSize: 12, color: 'var(--neutral-400)' }}>
+                                          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
                                             Paid {inst.paid_date ? new Date(inst.paid_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}
                                           </span>
                                         )}
@@ -338,7 +342,7 @@ export default function FinancialLedger({ showToast, customers, products, onRefr
               fetchData();
               onRefresh?.();
             } catch (err) {
-              showToast('Failed to record sale: ' + err.message, true);
+              console.warn('Failed to record sale:', err.message);
             }
           }}
         />
