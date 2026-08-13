@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-// Connect to Supabase
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'YOUR_SUPABASE_URL'
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_KEY'
+// Connect to Supabase using Vite environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL'
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_KEY'
+
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
 export default function App() {
@@ -70,8 +71,8 @@ export default function App() {
               ) : (
                 customers.map((c) => (
                   <div key={c.id} style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
-                    <h3>{c.full_name} ({c.phone})</h3>
-                    <p>Address: {c.address || 'N/A'}</p>
+                    <h3>{c.full_name} ({c.phone || c.primary_phone})</h3>
+                    <p>Address: {c.address || c.installation_address || 'N/A'}</p>
                     <h4>Owned Assets ({c.assets?.length || 0}):</h4>
                     <ul>
                       {c.assets?.map((asset) => (
