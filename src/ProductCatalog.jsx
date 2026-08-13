@@ -293,11 +293,14 @@ export default function ProductCatalog({ showToast, products, onRefresh }) {
             try {
               const { error } = await supabase.from('products').insert([productData]);
               if (error) throw error;
-              setShowAddProduct(false);
               showToast('Product added successfully');
               onRefresh?.();
             } catch (err) {
               console.warn('Failed to add product:', err.message);
+              showToast('Could not save product. Check your connection.', true);
+            } finally {
+              // Always close the modal so the user is never stuck on the form.
+              setShowAddProduct(false);
             }
           }}
         />
@@ -330,13 +333,18 @@ function AddProductModal({ onClose, onSubmit }) {
     if (!form.name.trim()) { setError('Product name is required'); return; }
     setSubmitting(true);
     setError('');
-    await onSubmit({
-      ...form,
-      price: Number(form.price) || 0,
-      cost_price: Number(form.cost_price) || 0,
-      stock: parseInt(form.stock) || 0,
-    });
-    setSubmitting(false);
+    try {
+      await onSubmit({
+        ...form,
+        price: Number(form.price) || 0,
+        cost_price: Number(form.cost_price) || 0,
+        stock: parseInt(form.stock) || 0,
+      });
+    } catch (err) {
+      console.warn('AddProductModal submit failed:', err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

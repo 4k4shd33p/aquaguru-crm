@@ -337,12 +337,15 @@ export default function FinancialLedger({ showToast, customers, products, onRefr
                 if (instError) throw instError;
               }
 
-              setShowAddSale(false);
               showToast('Sale recorded successfully');
               fetchData();
               onRefresh?.();
             } catch (err) {
               console.warn('Failed to record sale:', err.message);
+              showToast('Could not save sale. Check your connection.', true);
+            } finally {
+              // Always close the modal so the user is never stuck on the form.
+              setShowAddSale(false);
             }
           }}
         />
@@ -415,8 +418,13 @@ function AddSaleModal({ customers, products, onClose, onSubmit }) {
       }
     }
 
-    await onSubmit(saleData, installmentData);
-    setSubmitting(false);
+    try {
+      await onSubmit(saleData, installmentData);
+    } catch (err) {
+      console.warn('AddSaleModal submit failed:', err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

@@ -290,12 +290,15 @@ export default function ServiceTicketLog({ showToast, customers, products, onRef
                 if (partsError) throw partsError;
               }
 
-              setShowForm(false);
               showToast('Service ticket logged successfully');
               fetchData();
               onRefresh?.();
             } catch (err) {
               console.warn('Failed to log ticket:', err.message);
+              showToast('Could not save ticket. Check your connection.', true);
+            } finally {
+              // Always close the modal so the user is never stuck on the form.
+              setShowForm(false);
             }
           }}
         />
@@ -478,8 +481,13 @@ function TicketForm({ customers, products, assets, onClose, onSubmit }) {
       payment_status: paymentStatus,
     };
 
-    await onSubmit(ticketData, allParts);
-    setSubmitting(false);
+    try {
+      await onSubmit(ticketData, allParts);
+    } catch (err) {
+      console.warn('TicketForm submit failed:', err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

@@ -93,11 +93,14 @@ export default function App() {
     try {
       const { error } = await supabase.from('customers').insert([formData]);
       if (error) throw error;
-      setShowAddCustomer(false);
       showToast('Customer added successfully');
       fetchData();
     } catch (err) {
       console.warn('handleAddCustomer failed:', err.message);
+      showToast('Could not save customer. Check your connection.', true);
+    } finally {
+      // Always close the modal so the user is never stuck on the form.
+      setShowAddCustomer(false);
     }
   };
 
@@ -480,8 +483,13 @@ function AddCustomerModal({ onClose, onSubmit }) {
     }
     setSubmitting(true);
     setError('');
-    await onSubmit(form);
-    setSubmitting(false);
+    try {
+      await onSubmit(form);
+    } catch (err) {
+      console.warn('AddCustomerModal submit failed:', err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
