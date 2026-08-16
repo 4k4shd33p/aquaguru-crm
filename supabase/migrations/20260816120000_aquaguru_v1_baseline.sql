@@ -56,11 +56,13 @@ create table public.technicians (
 );
 create table public.parts (
   id uuid primary key default gen_random_uuid(), part_code text not null unique, name text not null,
-  category text, brand text, model text, standard_cost numeric(14,2) check (standard_cost is null or standard_cost >= 0),
+  category text, brand text, model text, component_role_id uuid references public.component_roles(id) on delete restrict,
+  standard_cost numeric(14,2) check (standard_cost is null or standard_cost >= 0),
   standard_selling_price numeric(14,2) check (standard_selling_price is null or standard_selling_price >= 0),
   equipment_tracking_enabled boolean not null default false, part_warranty_eligible boolean not null default false,
   default_warranty_months integer check (default_warranty_months is null or default_warranty_months > 0),
-  is_active boolean not null default true, notes text, created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+  is_active boolean not null default true, notes text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+  check (not equipment_tracking_enabled or component_role_id is not null)
 );
 create unique index parts_name_brand_model_unique on public.parts (name, brand, model) nulls not distinct;
 create table public.product_models (
@@ -82,10 +84,10 @@ create table public.locations (
 );
 create table public.equipment (
   id uuid primary key default gen_random_uuid(), equipment_code text not null unique,
-  customer_id uuid references public.customers(id) on delete restrict, location_id uuid references public.locations(id) on delete restrict,
+  customer_id uuid not null references public.customers(id) on delete restrict, location_id uuid references public.locations(id) on delete restrict,
   equipment_type_id uuid references public.equipment_types(id) on delete restrict, product_model_id uuid references public.product_models(id) on delete restrict,
   source text not null default 'Unknown' check (source in ('Aquaguru Sale','Purchased Elsewhere','Customer-Owned / Existing','Other','Unknown')),
-  serial_number text, installation_date date,
+  serial_number text,
   status text not null default 'Unknown' check (status in ('Active','Inactive','Decommissioned','Unknown')),
   notes text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   check (location_id is null or customer_id is not null)
@@ -137,7 +139,8 @@ create table public.installations (
 );
 create table public.equipment_warranties (
   id uuid primary key default gen_random_uuid(), warranty_code text not null unique, equipment_id uuid not null references public.equipment(id) on delete restrict,
-  sale_id uuid references public.sales(id) on delete restrict, start_date date not null, end_date date not null, duration_months integer not null check (duration_months > 0),
+  sale_id uuid references public.sales(id) on delete restrict, installation_id uuid references public.installations(id) on delete restrict,
+  start_date date not null, end_date date not null, duration_months integer not null check (duration_months > 0),
   planned_visits integer not null default 3 check (planned_visits >= 0), status text not null default 'Unknown' check (status in ('Active','Expired','Cancelled','Void','Unknown')), notes text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), check (end_date >= start_date)
 );
 create table public.amc_cycles (
@@ -158,7 +161,7 @@ create table public.services (
   issue_reported text, diagnosis text, work_performed text, tds_in numeric(10,2) check(tds_in is null or tds_in >= 0), tds_out numeric(10,2) check(tds_out is null or tds_out >= 0),
   next_service_due date, technician_charge numeric(14,2) check(technician_charge is null or technician_charge >= 0),
   equipment_warranty_id uuid references public.equipment_warranties(id) on delete restrict, amc_cycle_id uuid references public.amc_cycles(id) on delete restrict,
-  status text not null default 'Unknown' check (status in ('Open','Completed','Cancelled','Void','Unknown')), notes text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+  status text not null default 'Unknown' check (status in ('Scheduled','Open','Completed','Cancelled','Void','Unknown')), notes text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   check (equipment_warranty_id is null or amc_cycle_id is null)
 );
 create table public.service_items (
@@ -248,6 +251,27 @@ begin
 end $$;
 create trigger validate_equipment_component_source before insert or update on public.equipment_components for each row execute function private.validate_equipment_component_source();
 
+create or replace function private.validate_equipment_warranty_installation()
+returns trigger language plpgsql set search_path = pg_catalog, public as $$
+declare installation_equipment uuid; installation_status text; actual_date date;
+begin
+  if new.installation_id is not null then
+    select equipment_id, status, installation_date into installation_equipment, installation_status, actual_date
+      from public.installations where id = new.installation_id;
+    if installation_equipment <> new.equipment_id then
+      raise exception 'Warranty installation must belong to the warranty equipment';
+    end if;
+    if installation_status <> 'Completed' or actual_date is null then
+      raise exception 'Warranty installation must be completed and have an actual installation date';
+    end if;
+    if new.start_date <> actual_date then
+      raise exception 'Warranty start date must equal the actual installation date';
+    end if;
+  end if;
+  return new;
+end $$;
+create trigger validate_equipment_warranty_installation before insert or update on public.equipment_warranties for each row execute function private.validate_equipment_warranty_installation();
+
 create or replace function private.validate_service_visit_context()
 returns trigger language plpgsql set search_path = pg_catalog, public as $$
 declare context_equipment uuid;
@@ -306,11 +330,13 @@ end $$;
 insert into public.equipment_types(name) values
  ('Residential RO Purifier'),('Commercial RO Purifier'),('Industrial RO System'),('UV / UF Purifier'),('Water Softener'),('Sand / Sediment Filter'),('Iron Remover'),('Other') on conflict (name) do nothing;
 insert into public.customer_types(name) values ('Residential'),('Commercial'),('Industrial'),('Other') on conflict (name) do nothing;
-insert into public.parts(name, equipment_tracking_enabled, part_warranty_eligible, default_warranty_months) values
- ('Membrane',true,true,12),('Pump',true,true,12),('Inline Sediment',false,true,12),('Inline Pre Carbon',false,true,12),('Inline Post Carbon',false,true,12),
- ('Adapter',false,false,null),('SV',false,false,null),('FR',false,false,null),('Float',false,false,null),('RO Tap',false,false,null),('Tank',false,false,null),('Stand',false,false,null),('Cover',false,false,null),('Body',false,false,null),('Membrane Housing',false,false,null),('Spun Filter Housing',false,false,null),('UV',false,false,null),('Alkaline / mineral cartridges',false,false,null),('Copper',false,false,null),('Other',false,false,null) on conflict (name, brand, model) do nothing;
-insert into public.service_types(name) values ('Scheduled Maintenance'),('Breakdown'),('Complaint'),('Inspection'),('Follow-up'),('Other') on conflict (name) do nothing;
 insert into public.component_roles(name) values ('Membrane'),('Pump'),('Other') on conflict (name) do nothing;
+insert into public.parts(name, equipment_tracking_enabled, part_warranty_eligible, default_warranty_months, component_role_id) values
+ ('Membrane',true,true,12,(select id from public.component_roles where name = 'Membrane')),
+ ('Pump',true,true,12,(select id from public.component_roles where name = 'Pump')),
+ ('Inline Sediment',false,true,12,null),('Inline Pre Carbon',false,true,12,null),('Inline Post Carbon',false,true,12,null),
+ ('Adapter',false,false,null,null),('SV',false,false,null,null),('FR',false,false,null,null),('Float',false,false,null,null),('RO Tap',false,false,null,null),('Tank',false,false,null,null),('Stand',false,false,null,null),('Cover',false,false,null,null),('Body',false,false,null,null),('Membrane Housing',false,false,null,null),('Spun Filter Housing',false,false,null,null),('UV',false,false,null,null),('Alkaline / mineral cartridges',false,false,null,null),('Copper',false,false,null,null),('Other',false,false,null,null) on conflict (name, brand, model) do nothing;
+insert into public.service_types(name) values ('Scheduled Maintenance'),('Breakdown'),('Complaint'),('Inspection'),('Follow-up'),('Other') on conflict (name) do nothing;
 insert into public.lead_sources(name) values ('Referral'),('Door Knock'),('Cold Call'),('WhatsApp'),('Phone Call'),('Website'),('Google Search'),('Google Ads'),('Meta Ads'),('Instagram Organic'),('Facebook Organic'),('Existing Customer'),('Service / Technician'),('Walk-in'),('Partner / Dealer Referral'),('Other') on conflict (name) do nothing;
 insert into public.payment_methods(name) values ('Cash'),('UPI'),('Bank Transfer'),('Card'),('Cheque'),('Other') on conflict (name) do nothing;
 
