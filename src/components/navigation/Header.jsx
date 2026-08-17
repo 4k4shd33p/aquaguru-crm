@@ -9,7 +9,11 @@ export function Header() {
   const isCustomerRoute = location.pathname.startsWith('/customers')
   const isEquipmentRoute = location.pathname.startsWith('/equipment')
   const isFinanceRoute = location.pathname.startsWith('/finance')
-  const title = isCustomerRoute ? (location.pathname === '/customers' ? 'Customers' : 'Customer details') : isEquipmentRoute ? (location.pathname === '/equipment' ? 'Equipment' : 'Equipment details') : isFinanceRoute ? 'Finance' : 'Dashboard'
+  const isSalesRoute = location.pathname.startsWith('/sales')
+  const isServiceRoute = location.pathname.startsWith('/service')
+  const isInstallationRoute = location.pathname.startsWith('/installations')
+  const isCoverageRoute = location.pathname.startsWith('/coverage')
+  const title = isCustomerRoute ? (location.pathname === '/customers' ? 'Customers' : 'Customer details') : isEquipmentRoute ? (location.pathname === '/equipment' ? 'Equipment' : 'Equipment details') : isSalesRoute ? 'Sales' : isServiceRoute ? 'Service' : isInstallationRoute ? 'Installations' : isCoverageRoute ? 'Coverage' : isFinanceRoute ? 'Finance' : 'Dashboard'
   const initials = (user?.email || 'A').slice(0, 1).toUpperCase()
   return <header className="app-header">
     <div><p className="breadcrumb">Workspace <span>/</span> {title}</p><h1>{title}</h1></div>
@@ -21,5 +25,6 @@ export function Header() {
     </div>
   </header>
 }
+
 
 
