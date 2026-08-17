@@ -23,6 +23,7 @@ import { PartWarrantyDetailPage } from '../pages/PartWarrantyDetailPage'
 import { InstallationsPage } from '../pages/InstallationsPage'
 import { NewInstallationPage } from '../pages/NewInstallationPage'
 import { InstallationDetailPage } from '../pages/InstallationDetailPage'
+import { FinancePage } from '../pages/FinancePage'
 
 function RequireAuth() {
   const { isLoading, session } = useAuth()
@@ -66,10 +67,12 @@ export const router = createBrowserRouter([
         { path: '/installations', element: <InstallationsPage /> },
         { path: '/installations/new', element: <NewInstallationPage /> },
         { path: '/installations/:installationId', element: <InstallationDetailPage /> },
+        { path: '/finance', element: <FinancePage /> },
         { path: '*', element: <Navigate to="/dashboard" replace /> },
       ],
     }],
   },
 ])
+
 
 
