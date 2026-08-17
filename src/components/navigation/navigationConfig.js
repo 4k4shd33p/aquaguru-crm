@@ -11,7 +11,8 @@ export const navigationItems = [
   { label: 'Finance', to: '/finance', icon: BadgeIndianRupee, available: true },
 ]
 
-export const settingsItem = { label: 'Settings', icon: Settings }
+export const settingsItem = { label: 'Settings', to: '/settings', icon: Settings, available: true }
+
 
 
 

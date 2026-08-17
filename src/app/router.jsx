@@ -24,6 +24,7 @@ import { InstallationsPage } from '../pages/InstallationsPage'
 import { NewInstallationPage } from '../pages/NewInstallationPage'
 import { InstallationDetailPage } from '../pages/InstallationDetailPage'
 import { FinancePage } from '../pages/FinancePage'
+import { SettingsPage } from '../pages/SettingsPage'
 
 function RequireAuth() {
   const { isLoading, session } = useAuth()
@@ -68,11 +69,13 @@ export const router = createBrowserRouter([
         { path: '/installations/new', element: <NewInstallationPage /> },
         { path: '/installations/:installationId', element: <InstallationDetailPage /> },
         { path: '/finance', element: <FinancePage /> },
+        { path: '/settings', element: <SettingsPage /> },
         { path: '*', element: <Navigate to="/dashboard" replace /> },
       ],
     }],
   },
 ])
+
 
 
 
