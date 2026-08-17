@@ -1,0 +1,8 @@
+import { ClipboardCheck } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ErrorState } from '../components/feedback/ErrorState'
+import { InstallationDirectory } from '../features/installations/components/InstallationDirectory'
+import { useInstallations, useInstallationTechnicians } from '../features/installations/hooks/useInstallations'
+import { useDebouncedValue } from '../features/customers/hooks/useDebouncedValue'
+export function InstallationsPage() { const [filters, setFilters] = useState({ page: 1, pageSize: 25, search: '', status: '', classification: '', technicianId: '', fromDate: '', toDate: '' }); const search = useDebouncedValue(filters.search); const query = useInstallations(useMemo(() => ({ ...filters, search }), [filters, search])); const technicians = useInstallationTechnicians(); return <div className="installations-page"><header className="page-heading"><div><span className="eyebrow">Installation</span><h2>Installation directory</h2><p>Schedule, complete, and retain Installation history per equipment.</p></div><span className="page-heading__count"><ClipboardCheck size={17} />{query.data?.count ?? 0} installations</span></header>{query.isError ? <ErrorState title="Installations could not be loaded" description="Please refresh and try again." /> : <InstallationDirectory rows={query.data?.rows ?? []} count={query.data?.count ?? 0} filters={filters} technicians={technicians.data ?? []} isLoading={query.isLoading || query.isFetching && !query.data} onFilterChange={(changes) => setFilters((current) => ({ ...current, ...changes }))} onPageChange={(page) => setFilters((current) => ({ ...current, page }))} />}</div> }
+
