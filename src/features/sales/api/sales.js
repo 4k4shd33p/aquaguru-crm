@@ -100,5 +100,8 @@ export async function addEmiPayment({ emiAccountId, values }) {
   return data
 }
 
-export async function getCustomerSales(customerId) { const { sales } = await getSales({ page: 1, pageSize: 10 }); return sales.filter((sale) => sale.customer_id === customerId) }
-
+export async function getCustomerSales(customerId) {
+  const { data, error } = await client().from('sales').select(saleFields).eq('customer_id', customerId).order('sale_date', { ascending: false }).order('created_at', { ascending: false }).limit(10)
+  if (error) throw error
+  return (data ?? []).map((sale) => ({ ...sale, totals: saleTotals(sale) }))
+}

@@ -1,12 +1,13 @@
 import { supabase } from '../../../lib/supabase'
 
 const equipmentFields = `
-  id, equipment_code, customer_id, location_id, equipment_type_id, product_model_id,
+  id, equipment_code, customer_id, location_id, equipment_type_id, product_model_id, sale_item_id,
   source, serial_number, status, notes, created_at, updated_at,
   customers ( id, customer_code, name, phone ),
   locations ( id, location_name, area, city, pincode ),
   equipment_types ( id, code, name ),
-  product_models ( id, product_code, model_name )
+  product_models ( id, product_code, model_name ),
+  sale_items ( id, sale_id, sales ( id, sale_code ) )
 `
 
 const componentFields = `
@@ -123,4 +124,3 @@ export async function decommissionEquipment(equipmentId) {
   if (error) throw error
   return data
 }
-
