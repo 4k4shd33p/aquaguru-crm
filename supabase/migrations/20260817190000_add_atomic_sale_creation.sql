@@ -2,6 +2,7 @@
 
 alter table public.sales
   add column submission_key uuid,
+  add column submission_fingerprint text,
   add constraint sales_submission_key_key unique (submission_key);
 
 alter table public.equipment
@@ -36,12 +37,11 @@ as $$
 declare
   v_sale_id uuid;
   v_sale_code text;
-  v_existing_customer_id uuid;
-  v_existing_sale_date date;
-  v_existing_invoice_number text;
-  v_existing_invoice_date date;
-  v_existing_lead_source_id uuid;
-  v_existing_source_detail text;
+  v_existing_submission_fingerprint text;
+  v_submission_fingerprint text;
+  v_normalized_invoice_number text;
+  v_normalized_source_detail text;
+  v_normalized_notes text;
   v_created boolean := false;
   v_item jsonb;
   v_unit_locations jsonb;
@@ -66,8 +66,24 @@ begin
     raise exception using errcode = '22023', message = 'items must be a non-empty JSON array';
   end if;
 
+  v_normalized_invoice_number := nullif(btrim(p_invoice_number), '');
+  v_normalized_source_detail := nullif(btrim(p_source_detail), '');
+  v_normalized_notes := nullif(btrim(p_notes), '');
+  v_submission_fingerprint := md5(jsonb_build_object(
+    'customer_id', p_customer_id,
+    'sale_date', p_sale_date,
+    'status', p_status,
+    'invoice_number', v_normalized_invoice_number,
+    'invoice_date', p_invoice_date,
+    'lead_source_id', p_lead_source_id,
+    'source_detail', v_normalized_source_detail,
+    'notes', v_normalized_notes,
+    'items', p_items
+  )::text);
+
   insert into public.sales as s (
     submission_key,
+    submission_fingerprint,
     customer_id,
     sale_date,
     status,
@@ -79,14 +95,15 @@ begin
   )
   values (
     p_submission_key,
+    v_submission_fingerprint,
     p_customer_id,
     p_sale_date,
     p_status,
-    nullif(btrim(p_invoice_number), ''),
+    v_normalized_invoice_number,
     p_invoice_date,
     p_lead_source_id,
-    nullif(btrim(p_source_detail), ''),
-    nullif(btrim(p_notes), '')
+    v_normalized_source_detail,
+    v_normalized_notes
   )
   on conflict (submission_key) do nothing
   returning s.id, s.sale_code into v_sale_id, v_sale_code;
@@ -95,21 +112,11 @@ begin
     select
       s.id,
       s.sale_code,
-      s.customer_id,
-      s.sale_date,
-      s.invoice_number,
-      s.invoice_date,
-      s.lead_source_id,
-      s.source_detail
+      s.submission_fingerprint
       into
         v_sale_id,
         v_sale_code,
-        v_existing_customer_id,
-        v_existing_sale_date,
-        v_existing_invoice_number,
-        v_existing_invoice_date,
-        v_existing_lead_source_id,
-        v_existing_source_detail
+        v_existing_submission_fingerprint
       from public.sales s
       where s.submission_key = p_submission_key;
 
@@ -117,12 +124,7 @@ begin
       raise exception using errcode = '23505', message = 'submission_key conflict could not be resolved';
     end if;
 
-    if v_existing_customer_id is distinct from p_customer_id
-      or v_existing_sale_date is distinct from p_sale_date
-      or v_existing_invoice_number is distinct from nullif(btrim(p_invoice_number), '')
-      or v_existing_invoice_date is distinct from p_invoice_date
-      or v_existing_lead_source_id is distinct from p_lead_source_id
-      or v_existing_source_detail is distinct from nullif(btrim(p_source_detail), '') then
+    if v_existing_submission_fingerprint is distinct from v_submission_fingerprint then
       raise exception using errcode = '23505', message = 'submission_key already belongs to a different sale request';
     end if;
 
