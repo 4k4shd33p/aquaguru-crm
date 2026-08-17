@@ -15,6 +15,11 @@ import { SaleDetailPage } from '../pages/SaleDetailPage'
 import { ServicesPage } from '../pages/ServicesPage'
 import { NewServicePage } from '../pages/NewServicePage'
 import { ServiceDetailPage } from '../pages/ServiceDetailPage'
+import { CoveragePage } from '../pages/CoveragePage'
+import { NewAmcPage } from '../pages/NewAmcPage'
+import { AmcDetailPage } from '../pages/AmcDetailPage'
+import { EquipmentWarrantyDetailPage } from '../pages/EquipmentWarrantyDetailPage'
+import { PartWarrantyDetailPage } from '../pages/PartWarrantyDetailPage'
 
 function RequireAuth() {
   const { isLoading, session } = useAuth()
@@ -50,6 +55,11 @@ export const router = createBrowserRouter([
         { path: '/service', element: <ServicesPage /> },
         { path: '/service/new', element: <NewServicePage /> },
         { path: '/service/:serviceId', element: <ServiceDetailPage /> },
+        { path: '/coverage', element: <CoveragePage /> },
+        { path: '/coverage/amc/new', element: <NewAmcPage /> },
+        { path: '/coverage/amc/:amcCycleId', element: <AmcDetailPage /> },
+        { path: '/coverage/warranties/:warrantyId', element: <EquipmentWarrantyDetailPage /> },
+        { path: '/coverage/part-warranties/:partWarrantyId', element: <PartWarrantyDetailPage /> },
         { path: '*', element: <Navigate to="/dashboard" replace /> },
       ],
     }],
