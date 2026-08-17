@@ -1,0 +1,12 @@
+import { formatCurrency, formatDate } from '../../../utils/formatters'
+
+export const classifications = ['Initial Installation', 'Reinstallation / Relocation']
+export const installationStatuses = ['Scheduled', 'Rescheduled', 'Completed', 'Cancelled', 'Unknown']
+export const date = (value) => formatDate(value)
+export const money = (value) => value === null || value === undefined ? 'Not recorded' : formatCurrency(value)
+export const tone = (status) => status === 'Completed' ? 'blue' : 'neutral'
+export const locationLabel = (location) => [location?.location_name, location?.area, location?.city, location?.pincode].filter(Boolean).join(' · ') || 'Location not recorded'
+export const equipmentLabel = (equipment) => equipment ? `${equipment.equipment_code}${equipment.product_models?.model_name ? ` · ${equipment.product_models.model_name}` : ''}` : 'Equipment unavailable'
+export function installationError(error) { const message = String(error?.message ?? '').toLowerCase(); if (message.includes('already has a completed') || message.includes('already completed')) return 'This equipment already has a completed initial installation.'; if (message.includes('sale_item') || message.includes('sale linkage')) return 'This equipment’s sale linkage is inconsistent. Review the equipment record before scheduling installation.'; if (message.includes('installation_date') || message.includes('installation date')) return 'Please enter a valid installation date.'; if (message.includes('submission_key already')) return 'This installation request no longer matches the original submission. Start a new request and try again.'; if (message.includes('tds') || message.includes('charges')) return 'TDS and charges cannot be negative.'; return 'The installation could not be saved. Please try again.' }
+export function warrantyPreview(installation) { const equipment = installation?.equipment; const months = equipment?.sale_items?.warranty_months; if (installation?.installation_classification === 'Reinstallation / Relocation') return 'This will record the reinstallation history. It will not restart the original equipment warranty.'; if (equipment?.source !== 'Aquaguru Sale' || !equipment?.sale_item_id) return 'No Aquaguru sale warranty will be activated.'; if (months === null || months === undefined) return 'Warranty intent is unknown; no automatic warranty will be created.'; if (Number(months) === 0) return 'This sale has no equipment warranty.'; return `Completing this installation will activate a ${months}-month equipment warranty from the installation date.` }
+
