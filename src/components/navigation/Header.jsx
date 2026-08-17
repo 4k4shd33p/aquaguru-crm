@@ -7,7 +7,8 @@ export function Header() {
   const { user, signOut } = useAuth()
   const location = useLocation()
   const isCustomerRoute = location.pathname.startsWith('/customers')
-  const title = isCustomerRoute ? (location.pathname === '/customers' ? 'Customers' : 'Customer details') : 'Dashboard'
+  const isEquipmentRoute = location.pathname.startsWith('/equipment')
+  const title = isCustomerRoute ? (location.pathname === '/customers' ? 'Customers' : 'Customer details') : isEquipmentRoute ? (location.pathname === '/equipment' ? 'Equipment' : 'Equipment details') : 'Dashboard'
   const initials = (user?.email || 'A').slice(0, 1).toUpperCase()
   return <header className="app-header">
     <div><p className="breadcrumb">Workspace <span>/</span> {title}</p><h1>{title}</h1></div>
@@ -19,3 +20,4 @@ export function Header() {
     </div>
   </header>
 }
+

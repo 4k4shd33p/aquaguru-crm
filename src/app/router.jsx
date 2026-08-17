@@ -6,6 +6,8 @@ import { AuthLayout } from '../layouts/AuthLayout'
 import { DashboardPage } from '../pages/DashboardPage'
 import { CustomerDetailPage } from '../pages/CustomerDetailPage'
 import { CustomersPage } from '../pages/CustomersPage'
+import { EquipmentDetailPage } from '../pages/EquipmentDetailPage'
+import { EquipmentPage } from '../pages/EquipmentPage'
 import { LoginPage } from '../pages/LoginPage'
 
 function RequireAuth() {
@@ -34,8 +36,11 @@ export const router = createBrowserRouter([
         { path: '/dashboard', element: <DashboardPage /> },
         { path: '/customers', element: <CustomersPage /> },
         { path: '/customers/:customerId', element: <CustomerDetailPage /> },
+        { path: '/equipment', element: <EquipmentPage /> },
+        { path: '/equipment/:equipmentId', element: <EquipmentDetailPage /> },
         { path: '*', element: <Navigate to="/dashboard" replace /> },
       ],
     }],
   },
 ])
+
