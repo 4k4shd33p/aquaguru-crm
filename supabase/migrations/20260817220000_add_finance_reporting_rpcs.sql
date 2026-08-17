@@ -143,7 +143,19 @@ returns table (
 )
 language sql stable security invoker set search_path = public, pg_temp
 as $$
-  with collections as (
+  with collections (
+    payment_date,
+    collection_type,
+    payment_id,
+    payment_code,
+    transaction_id,
+    transaction_code,
+    customer_id,
+    customer_name,
+    payment_method_id,
+    payment_method_name,
+    amount
+  ) as (
     select sp.payment_date, 'Sale'::text, sp.id, sp.payment_code, s.id, s.sale_code, c.id, c.name, pm.id, pm.name, sp.amount
     from public.sale_payments sp
     join public.sales s on s.id = sp.sale_id and s.status in ('Confirmed', 'Completed')
