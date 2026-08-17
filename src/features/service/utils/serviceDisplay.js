@@ -1,0 +1,7 @@
+import { formatCurrency, formatDate } from '../../../utils/formatters'
+export { formatCurrency, formatDate }
+export const serviceStatusTone = (status) => ({ Completed: 'blue', Scheduled: 'neutral', Open: 'neutral', Cancelled: 'neutral', Void: 'neutral', Unknown: 'neutral' }[status] || 'neutral')
+export const coverageLabel = (item) => item.coverage_type === 'Equipment Warranty' ? item.equipment_warranties?.warranty_code || 'Equipment warranty' : item.coverage_type === 'AMC' ? item.amc_cycles?.amc_code || 'AMC' : item.coverage_type === 'Part Warranty' ? item.service_item_warranties?.part_warranty_code || 'Part warranty' : item.coverage_type
+export const equipmentLabel = (equipment) => [equipment?.equipment_code, equipment?.serial_number && `Serial ${equipment.serial_number}`].filter(Boolean).join(' · ')
+export function serviceErrorMessage(error) { const message = error?.message?.toLowerCase() || ''; if (message.includes('submission')) return 'This service request was already used with different details. Please start a new service.'; if (message.includes('coverage') || message.includes('warranty') || message.includes('amc')) return 'The selected coverage is not active for this equipment and service date.'; if (message.includes('component')) return 'A tracked component role can be updated only once per completed service.'; if (message.includes('quantity')) return 'This service operation requires a quantity of one.'; return 'The service could not be saved. Please review the details and try again.' }
+

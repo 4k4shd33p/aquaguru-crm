@@ -12,6 +12,9 @@ import { LoginPage } from '../pages/LoginPage'
 import { SalesPage } from '../pages/SalesPage'
 import { NewSalePage } from '../pages/NewSalePage'
 import { SaleDetailPage } from '../pages/SaleDetailPage'
+import { ServicesPage } from '../pages/ServicesPage'
+import { NewServicePage } from '../pages/NewServicePage'
+import { ServiceDetailPage } from '../pages/ServiceDetailPage'
 
 function RequireAuth() {
   const { isLoading, session } = useAuth()
@@ -44,6 +47,9 @@ export const router = createBrowserRouter([
         { path: '/sales', element: <SalesPage /> },
         { path: '/sales/new', element: <NewSalePage /> },
         { path: '/sales/:saleId', element: <SaleDetailPage /> },
+        { path: '/service', element: <ServicesPage /> },
+        { path: '/service/new', element: <NewServicePage /> },
+        { path: '/service/:serviceId', element: <ServiceDetailPage /> },
         { path: '*', element: <Navigate to="/dashboard" replace /> },
       ],
     }],

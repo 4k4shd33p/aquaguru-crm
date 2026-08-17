@@ -5,7 +5,7 @@ export const navigationItems = [
   { label: 'Customers', to: '/customers', icon: UsersRound, available: true },
   { label: 'Equipment', to: '/equipment', icon: Boxes, available: true },
   { label: 'Sales', to: '/sales', icon: ChartNoAxesCombined, available: true },
-  { label: 'Service', icon: ClipboardCheck },
+  { label: 'Service', to: '/service', icon: ClipboardCheck, available: true },
   { label: 'Coverage', icon: ShieldCheck },
   { label: 'Finance', icon: BadgeIndianRupee },
 ]
