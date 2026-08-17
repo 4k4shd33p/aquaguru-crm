@@ -20,6 +20,9 @@ import { NewAmcPage } from '../pages/NewAmcPage'
 import { AmcDetailPage } from '../pages/AmcDetailPage'
 import { EquipmentWarrantyDetailPage } from '../pages/EquipmentWarrantyDetailPage'
 import { PartWarrantyDetailPage } from '../pages/PartWarrantyDetailPage'
+import { InstallationsPage } from '../pages/InstallationsPage'
+import { NewInstallationPage } from '../pages/NewInstallationPage'
+import { InstallationDetailPage } from '../pages/InstallationDetailPage'
 
 function RequireAuth() {
   const { isLoading, session } = useAuth()
@@ -60,9 +63,13 @@ export const router = createBrowserRouter([
         { path: '/coverage/amc/:amcCycleId', element: <AmcDetailPage /> },
         { path: '/coverage/warranties/:warrantyId', element: <EquipmentWarrantyDetailPage /> },
         { path: '/coverage/part-warranties/:partWarrantyId', element: <PartWarrantyDetailPage /> },
+        { path: '/installations', element: <InstallationsPage /> },
+        { path: '/installations/new', element: <NewInstallationPage /> },
+        { path: '/installations/:installationId', element: <InstallationDetailPage /> },
         { path: '*', element: <Navigate to="/dashboard" replace /> },
       ],
     }],
   },
 ])
+
 
