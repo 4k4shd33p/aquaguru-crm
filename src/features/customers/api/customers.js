@@ -16,34 +16,50 @@ function nullable(value) {
   return trimmed || null
 }
 
-export async function getCustomers({ page = 1, pageSize = 25, search = '', customerTypeId = '', status = '' }) {
+export async function getCustomers({ page = 1, pageSize = 25, search = '', customerTypeId = '', status = '', city = '', area = '' }) {
   const client = requireClient()
-  let query = client.from('customers').select(customerFields, { count: 'exact' })
-
-  const term = search.trim().replace(/[,.()]/g, ' ')
-  if (term) query = query.or(`name.ilike.%${term}%,phone.ilike.%${term}%,customer_code.ilike.%${term}%`)
-  if (customerTypeId) query = query.eq('customer_type_id', customerTypeId)
-  if (status === 'active') query = query.eq('is_active', true)
-  if (status === 'inactive') query = query.eq('is_active', false)
-
   const from = (page - 1) * pageSize
-  const { data, count, error } = await query.order('created_at', { ascending: false }).range(from, from + pageSize - 1)
+  const { data, error } = await client.rpc('search_customers', {
+    p_search_text: nullable(search),
+    p_customer_type_id: customerTypeId || null,
+    p_is_active: status === 'active' ? true : status === 'inactive' ? false : null,
+    p_city: nullable(city),
+    p_area: nullable(area),
+    p_offset: from,
+    p_limit: pageSize,
+  })
   if (error) throw error
 
-  const customerIds = data.map((customer) => customer.id)
-  const { data: locations, error: locationError } = customerIds.length
-    ? await client.from('locations').select('customer_id, area, city, is_active, created_at').in('customer_id', customerIds).eq('is_active', true).order('created_at')
-    : { data: [], error: null }
-  if (locationError) throw locationError
-
-  const representativeLocation = new Map()
-  locations.forEach((location) => {
-    if (!representativeLocation.has(location.customer_id)) representativeLocation.set(location.customer_id, location)
-  })
-
   return {
-    customers: data.map((customer) => ({ ...customer, representativeLocation: representativeLocation.get(customer.id) ?? null })),
-    count: count ?? 0,
+    customers: (data ?? []).map((customer) => ({
+      ...customer,
+      customer_types: customer.customer_type_name ? { id: customer.customer_type_id, name: customer.customer_type_name } : null,
+      representativeLocation: customer.representative_area || customer.representative_city || customer.representative_pincode
+        ? { area: customer.representative_area, city: customer.representative_city, pincode: customer.representative_pincode }
+        : null,
+    })),
+    count: data?.[0]?.total_count ?? 0,
+  }
+}
+
+function sortedDistinct(values) {
+  const unique = new Map()
+  values.forEach((value) => {
+    const trimmed = value?.trim()
+    if (trimmed && !unique.has(trimmed.toLocaleLowerCase())) unique.set(trimmed.toLocaleLowerCase(), trimmed)
+  })
+  return [...unique.values()].sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }))
+}
+
+export async function getCustomerLocationFilterOptions(city = '') {
+  const { data, error } = await requireClient().from('locations').select('city, area').eq('is_active', true)
+  if (error) throw error
+
+  const selectedCity = city.trim().toLocaleLowerCase()
+  const locations = data ?? []
+  return {
+    cities: sortedDistinct(locations.map((location) => location.city)),
+    areas: sortedDistinct(locations.filter((location) => !selectedCity || location.city?.trim().toLocaleLowerCase() === selectedCity).map((location) => location.area)),
   }
 }
 
@@ -92,3 +108,4 @@ export async function updateCustomer({ customerId, values }) {
   if (error) throw error
   return data
 }
+

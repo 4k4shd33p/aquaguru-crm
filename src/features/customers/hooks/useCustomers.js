@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createCustomer, findCustomersByPhone, getCustomerById, getCustomers, getCustomerTypes, updateCustomer } from '../api/customers'
+import { createCustomer, findCustomersByPhone, getCustomerById, getCustomerLocationFilterOptions, getCustomers, getCustomerTypes, updateCustomer } from '../api/customers'
 
 export const customerKeys = {
   all: ['customers'],
   list: (filters) => ['customers', 'list', filters],
   detail: (customerId) => ['customers', 'detail', customerId],
   types: ['customer-types'],
+  locationFilterOptions: (city) => ['customers', 'location-filter-options', city],
   duplicatePhone: (phone, customerId) => ['customers', 'duplicate-phone', phone, customerId],
 }
 
@@ -19,6 +20,10 @@ export function useCustomer(customerId) {
 
 export function useCustomerTypes() {
   return useQuery({ queryKey: customerKeys.types, queryFn: getCustomerTypes, staleTime: 10 * 60 * 1000 })
+}
+
+export function useCustomerLocationFilterOptions(city) {
+  return useQuery({ queryKey: customerKeys.locationFilterOptions(city), queryFn: () => getCustomerLocationFilterOptions(city), staleTime: 5 * 60 * 1000 })
 }
 
 export function useDuplicatePhone(phone, customerId) {
@@ -40,3 +45,4 @@ export function useUpdateCustomer() {
     },
   })
 }
+
