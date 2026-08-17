@@ -36,6 +36,12 @@ as $$
 declare
   v_sale_id uuid;
   v_sale_code text;
+  v_existing_customer_id uuid;
+  v_existing_sale_date date;
+  v_existing_invoice_number text;
+  v_existing_invoice_date date;
+  v_existing_lead_source_id uuid;
+  v_existing_source_detail text;
   v_created boolean := false;
   v_item jsonb;
   v_unit_locations jsonb;
@@ -86,10 +92,39 @@ begin
   returning s.id, s.sale_code into v_sale_id, v_sale_code;
 
   if not found then
-    select s.id, s.sale_code
-      into v_sale_id, v_sale_code
+    select
+      s.id,
+      s.sale_code,
+      s.customer_id,
+      s.sale_date,
+      s.invoice_number,
+      s.invoice_date,
+      s.lead_source_id,
+      s.source_detail
+      into
+        v_sale_id,
+        v_sale_code,
+        v_existing_customer_id,
+        v_existing_sale_date,
+        v_existing_invoice_number,
+        v_existing_invoice_date,
+        v_existing_lead_source_id,
+        v_existing_source_detail
       from public.sales s
       where s.submission_key = p_submission_key;
+
+    if not found then
+      raise exception using errcode = '23505', message = 'submission_key conflict could not be resolved';
+    end if;
+
+    if v_existing_customer_id is distinct from p_customer_id
+      or v_existing_sale_date is distinct from p_sale_date
+      or v_existing_invoice_number is distinct from nullif(btrim(p_invoice_number), '')
+      or v_existing_invoice_date is distinct from p_invoice_date
+      or v_existing_lead_source_id is distinct from p_lead_source_id
+      or v_existing_source_detail is distinct from nullif(btrim(p_source_detail), '') then
+      raise exception using errcode = '23505', message = 'submission_key already belongs to a different sale request';
+    end if;
 
     return query
       select v_sale_id, v_sale_code, false, e.sale_item_id, e.id, e.equipment_code
@@ -210,5 +245,6 @@ end;
 $$;
 
 revoke all on function public.create_sale_with_items(uuid, uuid, date, text, jsonb, text, date, uuid, text, text) from public;
+revoke all on function public.create_sale_with_items(uuid, uuid, date, text, jsonb, text, date, uuid, text, text) from anon;
 grant execute on function public.create_sale_with_items(uuid, uuid, date, text, jsonb, text, date, uuid, text, text) to authenticated;
 
