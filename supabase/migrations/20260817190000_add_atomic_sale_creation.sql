@@ -60,7 +60,7 @@ begin
     raise exception using errcode = '22023', message = 'items must be a non-empty JSON array';
   end if;
 
-  insert into public.sales (
+  insert into public.sales as s (
     submission_key,
     customer_id,
     sale_date,
@@ -83,7 +83,7 @@ begin
     nullif(btrim(p_notes), '')
   )
   on conflict (submission_key) do nothing
-  returning id, sale_code into v_sale_id, v_sale_code;
+  returning s.id, s.sale_code into v_sale_id, v_sale_code;
 
   if not found then
     select s.id, s.sale_code
@@ -179,7 +179,7 @@ begin
         raise exception using errcode = '23503', message = 'each equipment location must belong to the sale customer';
       end if;
 
-      insert into public.equipment (
+      insert into public.equipment as e (
         customer_id,
         location_id,
         equipment_type_id,
@@ -195,7 +195,7 @@ begin
         v_sale_item_id,
         'Aquaguru Sale'
       )
-      returning id, equipment_code into v_equipment_id, v_equipment_code;
+      returning e.id, e.equipment_code into v_equipment_id, v_equipment_code;
 
       sale_id := v_sale_id;
       sale_code := v_sale_code;
