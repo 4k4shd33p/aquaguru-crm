@@ -87,23 +87,14 @@ as $$
         )
       )
       and (
-        i.city is null
+        (i.city is null and i.area is null)
         or exists (
           select 1
           from public.locations l
           where l.customer_id = c.id
             and l.is_active
-            and lower(btrim(l.city)) = lower(i.city)
-        )
-      )
-      and (
-        i.area is null
-        or exists (
-          select 1
-          from public.locations l
-          where l.customer_id = c.id
-            and l.is_active
-            and lower(btrim(l.area)) = lower(i.area)
+            and (i.city is null or lower(btrim(l.city)) = lower(i.city))
+            and (i.area is null or lower(btrim(l.area)) = lower(i.area))
         )
       )
   )
