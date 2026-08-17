@@ -1,12 +1,16 @@
 import { ChevronDown, LogOut, Plus, Search } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../features/auth/AuthProvider'
 import { IconButton } from '../ui/IconButton'
 
 export function Header() {
   const { user, signOut } = useAuth()
+  const location = useLocation()
+  const isCustomerRoute = location.pathname.startsWith('/customers')
+  const title = isCustomerRoute ? (location.pathname === '/customers' ? 'Customers' : 'Customer details') : 'Dashboard'
   const initials = (user?.email || 'A').slice(0, 1).toUpperCase()
   return <header className="app-header">
-    <div><p className="breadcrumb">Workspace <span>/</span> Dashboard</p><h1>Dashboard</h1></div>
+    <div><p className="breadcrumb">Workspace <span>/</span> {title}</p><h1>{title}</h1></div>
     <div className="app-header__actions">
       <label className="search"><Search size={17} /><input aria-label="Global search" placeholder="Search CRM" disabled /><kbd>⌘ K</kbd></label>
       <button className="header-create" disabled title="Create actions will be available with business modules"><Plus size={17} /> Create</button>

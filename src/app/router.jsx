@@ -4,6 +4,8 @@ import { LoadingScreen } from '../components/feedback/LoadingScreen'
 import { AppLayout } from '../layouts/AppLayout'
 import { AuthLayout } from '../layouts/AuthLayout'
 import { DashboardPage } from '../pages/DashboardPage'
+import { CustomerDetailPage } from '../pages/CustomerDetailPage'
+import { CustomersPage } from '../pages/CustomersPage'
 import { LoginPage } from '../pages/LoginPage'
 
 function RequireAuth() {
@@ -30,6 +32,8 @@ export const router = createBrowserRouter([
       children: [
         { index: true, element: <Navigate to="/dashboard" replace /> },
         { path: '/dashboard', element: <DashboardPage /> },
+        { path: '/customers', element: <CustomersPage /> },
+        { path: '/customers/:customerId', element: <CustomerDetailPage /> },
         { path: '*', element: <Navigate to="/dashboard" replace /> },
       ],
     }],

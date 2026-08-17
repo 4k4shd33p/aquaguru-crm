@@ -2,7 +2,7 @@ import { BadgeIndianRupee, Boxes, ChartNoAxesCombined, ClipboardCheck, Gauge, Se
 
 export const navigationItems = [
   { label: 'Dashboard', to: '/dashboard', icon: Gauge, available: true },
-  { label: 'Customers', icon: UsersRound },
+  { label: 'Customers', to: '/customers', icon: UsersRound, available: true },
   { label: 'Equipment', icon: Boxes },
   { label: 'Sales', icon: ChartNoAxesCombined },
   { label: 'Service', icon: ClipboardCheck },
