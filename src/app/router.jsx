@@ -9,6 +9,9 @@ import { CustomersPage } from '../pages/CustomersPage'
 import { EquipmentDetailPage } from '../pages/EquipmentDetailPage'
 import { EquipmentPage } from '../pages/EquipmentPage'
 import { LoginPage } from '../pages/LoginPage'
+import { SalesPage } from '../pages/SalesPage'
+import { NewSalePage } from '../pages/NewSalePage'
+import { SaleDetailPage } from '../pages/SaleDetailPage'
 
 function RequireAuth() {
   const { isLoading, session } = useAuth()
@@ -38,6 +41,9 @@ export const router = createBrowserRouter([
         { path: '/customers/:customerId', element: <CustomerDetailPage /> },
         { path: '/equipment', element: <EquipmentPage /> },
         { path: '/equipment/:equipmentId', element: <EquipmentDetailPage /> },
+        { path: '/sales', element: <SalesPage /> },
+        { path: '/sales/new', element: <NewSalePage /> },
+        { path: '/sales/:saleId', element: <SaleDetailPage /> },
         { path: '*', element: <Navigate to="/dashboard" replace /> },
       ],
     }],
