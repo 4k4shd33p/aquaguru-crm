@@ -16,7 +16,7 @@ const amcFields = `id, amc_code, equipment_id, cycle_number, start_date, end_dat
   services ( id, service_code, service_date, status, technician_charge, service_types ( name ) )`
 const partWarrantyFields = `id, part_warranty_code, service_item_id, equipment_id, part_id, start_date, end_date, duration_months, status, replaced_warranty_id, notes, created_at,
   equipment ( ${equipmentFields} ), parts ( id, part_code, name ),
-  service_items ( id, service_id, services ( id, service_code, service_date, status ) )`
+  service_items!service_item_warranties_service_item_id_fkey ( id, service_id, services ( id, service_code, service_date, status ) )`
 
 function safeTerm(value) { return value.trim().replace(/[%,_(),]/g, ' ') }
 function pageRange(page, pageSize) { return [(page - 1) * pageSize, page * pageSize - 1] }
