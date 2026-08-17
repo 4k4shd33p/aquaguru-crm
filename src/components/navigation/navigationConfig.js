@@ -6,9 +6,11 @@ export const navigationItems = [
   { label: 'Equipment', to: '/equipment', icon: Boxes, available: true },
   { label: 'Sales', to: '/sales', icon: ChartNoAxesCombined, available: true },
   { label: 'Service', to: '/service', icon: ClipboardCheck, available: true },
+  { label: 'Installations', to: '/installations', icon: ClipboardCheck, available: true },
   { label: 'Coverage', to: '/coverage', icon: ShieldCheck, available: true },
   { label: 'Finance', icon: BadgeIndianRupee },
 ]
 
 export const settingsItem = { label: 'Settings', icon: Settings }
+
 
