@@ -1,5 +1,14 @@
-export function validateServiceRequest({ status, items, parts }) {
+export function validateServiceRequest({ status, items, parts, finalCustomerCharge, otherDirectCost, otherDirectCostNote, customerChargeNote }) {
   if (status === 'Completed' && !items.length) return 'Completed service requires at least one work item.'
+  const finalChargeKnown = finalCustomerCharge !== '' && finalCustomerCharge !== null && finalCustomerCharge !== undefined
+  const finalCharge = finalChargeKnown ? Number(finalCustomerCharge) : null
+  const chargeableSubtotal = items.reduce((sum, item) => item.coverage_type === 'Paid'
+    ? sum + Number(item.standard_price || 0) * Number(item.quantity || 1)
+    : sum, 0)
+  if (status === 'Completed' && !finalChargeKnown) return 'Completed services require Final Customer Charge.'
+  if (finalChargeKnown && (Number.isNaN(finalCharge) || finalCharge < 0)) return 'Final Customer Charge cannot be negative.'
+  if (Number(otherDirectCost || 0) > 0 && !String(otherDirectCostNote || '').trim()) return 'Other Direct Cost Note is required when Other Direct Cost is greater than zero.'
+  if (finalChargeKnown && finalCharge > chargeableSubtotal && !String(customerChargeNote || '').trim()) return 'Customer Charge Note is required when Final Customer Charge exceeds Chargeable Subtotal.'
   const roles = new Set()
   for (const item of items) {
     if (!item.item_type) return 'Choose an item type for every work item.'
