@@ -62,7 +62,7 @@ export function EquipmentForm({ equipment, initialCustomer, onCancel, onSave, is
 
   function submit(values) {
     const saved = initialValues(equipment)
-    onSave({
+    return onSave({
       ...values,
       location_id: !dirtyFields.location_id && saved.location_id && !values.location_id ? saved.location_id : values.location_id,
       equipment_type_id: !dirtyFields.equipment_type_id && saved.equipment_type_id && !values.equipment_type_id ? saved.equipment_type_id : values.equipment_type_id,
