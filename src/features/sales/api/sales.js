@@ -3,8 +3,8 @@ import { supabase } from '../../../lib/supabase'
 const saleFields = `id, sale_code, customer_id, sale_date, invoice_number, invoice_date, status, lead_source_id, source_detail, notes, created_at,
   customers ( id, customer_code, name, phone ), lead_sources ( id, name ),
   sale_items ( id, product_model_id, quantity, standard_unit_price, actual_unit_price, unit_cost, discount, warranty_months, notes, product_models ( id, product_code, model_name ) ),
-  sale_payments ( id, payment_code, payment_date, amount, reference_number, notes, payment_methods ( id, name ) ),
-  emi_accounts ( id, emi_code, total_financed_amount, expected_payment_amount, expected_payment_frequency, expected_payment_day, start_date, end_date, status, notes, emi_payments ( id, payment_code, payment_date, amount, reference_number, notes, payment_methods ( id, name ) ) ),\n  sale_corrections ( id, correction_note, corrected_at, corrected_by )`
+  sale_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, correction_of_payment: sale_payments!sale_payments_correction_of_payment_id_fkey ( id, payment_code ), corrected_by_payment: sale_payments!sale_payments_corrected_by_payment_id_fkey ( id, payment_code ), payment_methods ( id, name ) ),
+  emi_accounts ( id, emi_code, total_financed_amount, expected_payment_amount, expected_payment_frequency, expected_payment_day, start_date, end_date, status, notes, emi_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, correction_of_payment: emi_payments!emi_payments_correction_of_payment_id_fkey ( id, payment_code ), corrected_by_payment: emi_payments!emi_payments_corrected_by_payment_id_fkey ( id, payment_code ), payment_methods ( id, name ) ) ),\n  sale_corrections ( id, correction_note, corrected_at, corrected_by )`
 
 const client = () => { if (!supabase) throw new Error('Supabase is not configured.'); return supabase }
 const nil = (value) => typeof value === 'string' ? value.trim() || null : value ?? null
@@ -12,8 +12,9 @@ const numberOrNull = (value) => value === '' || value === null || value === unde
 
 export function saleTotals(sale) {
   const total = (sale.sale_items ?? []).reduce((sum, item) => sum + Number(item.actual_unit_price || 0) * Number(item.quantity || 0), 0)
-  const salePayments = (sale.sale_payments ?? []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
-  const emiPayments = (sale.emi_accounts ?? []).flatMap((account) => account.emi_payments ?? []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+  const valid = (payment) => (payment.payment_status ?? 'Valid') === 'Valid'
+  const salePayments = (sale.sale_payments ?? []).filter(valid).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+  const emiPayments = (sale.emi_accounts ?? []).flatMap((account) => account.emi_payments ?? []).filter(valid).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
   return { total, collected: salePayments + emiPayments, outstanding: total - salePayments - emiPayments, salePayments, emiPayments }
 }
 

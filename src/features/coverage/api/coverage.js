@@ -12,7 +12,7 @@ const warrantyFields = `id, warranty_code, equipment_id, sale_id, installation_i
   services ( id, service_code, service_date, status, technician_charge, service_types ( name ) )`
 const amcFields = `id, amc_code, equipment_id, cycle_number, start_date, end_date, standard_price, agreed_price, planned_visits, status, effective_status, notes, created_at,
   equipment ( ${equipmentFields} ),
-  amc_payments ( id, payment_code, payment_date, amount, reference_number, notes, payment_methods ( id, name ) ),
+  amc_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, correction_of_payment: amc_payments!amc_payments_correction_of_payment_id_fkey ( id, payment_code ), corrected_by_payment: amc_payments!amc_payments_corrected_by_payment_id_fkey ( id, payment_code ), payment_methods ( id, name ) ),
   services ( id, service_code, service_date, status, technician_charge, service_types ( name ) )`
 const partWarrantyFields = `id, part_warranty_code, service_item_id, equipment_id, part_id, start_date, end_date, duration_months, status, replaced_warranty_id, notes, created_at,
   equipment ( ${equipmentFields} ), parts ( id, part_code, name ),
@@ -22,7 +22,7 @@ function safeTerm(value) { return value.trim().replace(/[%,_(),]/g, ' ') }
 function pageRange(page, pageSize) { return [(page - 1) * pageSize, page * pageSize - 1] }
 
 export function amcTotals(amc) {
-  const collected = (amc.amc_payments ?? []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+  const collected = (amc.amc_payments ?? []).filter((payment) => (payment.payment_status ?? 'Valid') === 'Valid').reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
   const agreed = amc.agreed_price === null || amc.agreed_price === undefined ? null : Number(amc.agreed_price)
   return { collected, outstanding: agreed === null ? null : agreed - collected, agreed }
 }
