@@ -24,6 +24,7 @@ function mutation(mutationFn) {
   })
 }
 export const useCreateSale = () => mutation(createAtomicSale)
-export const useCorrectSale = () => mutation(correctSale)\nexport const useAddSalePayment = () => mutation(addSalePayment)
+export const useCorrectSale = () => mutation(correctSale)
+export const useAddSalePayment = () => mutation(addSalePayment)
 export const useCreateEmiAccount = () => mutation(createEmiAccount)
 export const useAddEmiPayment = () => mutation(addEmiPayment)
