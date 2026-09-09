@@ -3,8 +3,8 @@ import { supabase } from '../../../lib/supabase'
 const saleFields = `id, sale_code, customer_id, sale_date, invoice_number, invoice_date, status, lead_source_id, source_detail, notes, created_at,
   customers ( id, customer_code, name, phone ), lead_sources ( id, name ),
   sale_items ( id, product_model_id, quantity, standard_unit_price, actual_unit_price, unit_cost, discount, warranty_months, notes, product_models ( id, product_code, model_name ) ),
-  sale_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, correction_of_payment: sale_payments!sale_payments_correction_of_payment_id_fkey ( id, payment_code ), corrected_by_payment: sale_payments!sale_payments_corrected_by_payment_id_fkey ( id, payment_code ), payment_methods ( id, name ) ),
-  emi_accounts ( id, emi_code, total_financed_amount, expected_payment_amount, expected_payment_frequency, expected_payment_day, start_date, end_date, status, notes, emi_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, correction_of_payment: emi_payments!emi_payments_correction_of_payment_id_fkey ( id, payment_code ), corrected_by_payment: emi_payments!emi_payments_corrected_by_payment_id_fkey ( id, payment_code ), payment_methods ( id, name ) ) ),\n  sale_corrections ( id, correction_note, corrected_at, corrected_by )`
+  sale_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, correction_of_payment_id, corrected_by_payment_id, payment_methods ( id, name ) ),
+  emi_accounts ( id, emi_code, total_financed_amount, expected_payment_amount, expected_payment_frequency, expected_payment_day, start_date, end_date, status, notes, emi_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, payment_methods ( id, name ) ) ),\n  sale_corrections ( id, correction_note, corrected_at, corrected_by )`
 
 const client = () => { if (!supabase) throw new Error('Supabase is not configured.'); return supabase }
 const nil = (value) => typeof value === 'string' ? value.trim() || null : value ?? null
@@ -16,6 +16,23 @@ export function saleTotals(sale) {
   const salePayments = (sale.sale_payments ?? []).filter(valid).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
   const emiPayments = (sale.emi_accounts ?? []).flatMap((account) => account.emi_payments ?? []).filter(valid).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
   return { total, collected: salePayments + emiPayments, outstanding: total - salePayments - emiPayments, salePayments, emiPayments }
+}
+
+function paymentHistoryRows(payments = []) {
+  const byId = new Map(payments.map((payment) => [payment.id, payment]))
+  return payments.map((payment) => ({
+    ...payment,
+    correction_of_payment: payment.correction_of_payment_id ? byId.get(payment.correction_of_payment_id) ?? null : null,
+    corrected_by_payment: payment.corrected_by_payment_id ? byId.get(payment.corrected_by_payment_id) ?? null : null,
+  }))
+}
+
+function withPaymentHistory(sale) {
+  return {
+    ...sale,
+    sale_payments: paymentHistoryRows(sale.sale_payments),
+    emi_accounts: (sale.emi_accounts ?? []).map((account) => ({ ...account, emi_payments: paymentHistoryRows(account.emi_payments) })),
+  }
 }
 
 export async function getSales({ page = 1, pageSize = 25, search = '', status = '', leadSourceId = '', fromDate = '', toDate = '' }) {
@@ -41,7 +58,8 @@ export async function getSale(saleId) {
     if (equipmentError) throw equipmentError
     equipment = rows ?? []
   }
-  return { ...data, equipment, totals: saleTotals(data) }
+  const sale = withPaymentHistory(data)
+  return { ...sale, equipment, totals: saleTotals(sale) }
 }
 
 export async function getSaleLookups() {
