@@ -7,7 +7,7 @@ const numberOrNull = (value) => value === '' || value === undefined || value ===
 const equipmentFields = `id, equipment_code, serial_number, status, source, customer_id, location_id,
   customers ( id, customer_code, name ), locations ( id, location_name, area, city, pincode ),
   product_models ( id, product_code, model_name ), equipment_types ( id, name )`
-const warrantyFields = `id, warranty_code, equipment_id, sale_id, installation_id, start_date, end_date, duration_months, planned_visits, status, notes, created_at,
+const warrantyFields = `id, warranty_code, equipment_id, sale_id, installation_id, start_date, end_date, duration_months, planned_visits, status, effective_status, notes, created_at,
   equipment ( ${equipmentFields} ), sales ( id, sale_code ), installations ( id, installation_code, installation_date ),
   services ( id, service_code, service_date, status, technician_charge, service_types ( name ) )`
 const amcFields = `id, amc_code, equipment_id, cycle_number, start_date, end_date, standard_price, agreed_price, planned_visits, status, notes, created_at,
@@ -30,7 +30,7 @@ export function amcTotals(amc) {
 export async function getEquipmentWarranties({ page = 1, pageSize = 25, search = '', status = '', fromDate = '', toDate = '' }) {
   const [from, to] = pageRange(page, pageSize)
   let query = client().from('equipment_warranties').select(warrantyFields, { count: 'exact' }).order('start_date', { ascending: false }).range(from, to)
-  if (status) query = query.eq('status', status)
+  if (status) query = query.eq('effective_status', status)
   if (fromDate) query = query.gte('start_date', fromDate)
   if (toDate) query = query.lte('end_date', toDate)
   const term = safeTerm(search); if (term) query = query.ilike('warranty_code', `%${term}%`)
@@ -42,7 +42,7 @@ export async function getEquipmentWarranty(id) { const { data, error } = await c
 
 export async function getAmcCycles({ page = 1, pageSize = 25, search = '', status = '', fromDate = '', toDate = '' }) {
   const [from, to] = pageRange(page, pageSize)
-  let query = client().from('amc_cycles').select(amcFields, { count: 'exact' }).order('start_date', { ascending: false }).range(from, to)
+  let query = client().from('amc_cycles_effective').select(amcFields, { count: 'exact' }).order('start_date', { ascending: false }).range(from, to)
   if (status) query = query.eq('status', status)
   if (fromDate) query = query.gte('start_date', fromDate)
   if (toDate) query = query.lte('end_date', toDate)
@@ -51,7 +51,7 @@ export async function getAmcCycles({ page = 1, pageSize = 25, search = '', statu
   return { rows: (data ?? []).map((row) => ({ ...row, totals: amcTotals(row) })), count: count ?? 0 }
 }
 
-export async function getAmcCycle(id) { const { data, error } = await client().from('amc_cycles').select(amcFields).eq('id', id).single(); if (error) throw error; return { ...data, totals: amcTotals(data) } }
+export async function getAmcCycle(id) { const { data, error } = await client().from('amc_cycles_effective').select(amcFields).eq('id', id).single(); if (error) throw error; return { ...data, totals: amcTotals(data) } }
 
 export async function searchAmcEquipment(search) {
   const term = safeTerm(search); if (term.length < 2) return []
@@ -63,7 +63,7 @@ export async function createAmcCycle(values) {
   const { data, error } = await client().rpc('create_amc_cycle', {
     p_submission_key: values.submissionKey, p_equipment_id: values.equipmentId, p_start_date: values.startDate, p_end_date: values.endDate,
     p_standard_price: numberOrNull(values.standardPrice), p_agreed_price: numberOrNull(values.agreedPrice),
-    p_planned_visits: numberOrNull(values.plannedVisits), p_status: values.status, p_notes: nil(values.notes),
+    p_planned_visits: numberOrNull(values.plannedVisits), p_status: null, p_notes: nil(values.notes),
   })
   if (error) throw error
   const result = data?.[0]; if (!result?.amc_cycle_id) throw new Error('The AMC was saved but no AMC reference was returned.')
@@ -96,7 +96,7 @@ export async function getPartWarranty(id) {
 export async function getEquipmentCoverage(equipmentId) {
   const [warranty, amc, parts] = await Promise.all([
     client().from('equipment_warranties').select('id, warranty_code, start_date, end_date, status').eq('equipment_id', equipmentId).eq('status', 'Active').order('end_date').limit(1),
-    client().from('amc_cycles').select('id, amc_code, start_date, end_date, status').eq('equipment_id', equipmentId).eq('status', 'Active').order('end_date').limit(1),
+    client().from('amc_cycles_effective').select('id, amc_code, start_date, end_date, status, effective_status').eq('equipment_id', equipmentId).eq('effective_status', 'Active').order('end_date').limit(1),
     client().from('service_item_warranties').select('id, part_warranty_code, start_date, end_date, status, parts ( name )').eq('equipment_id', equipmentId).eq('status', 'Active').order('end_date').limit(4),
   ])
   if (warranty.error || amc.error || parts.error) throw warranty.error || amc.error || parts.error

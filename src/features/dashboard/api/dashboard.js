@@ -30,7 +30,7 @@ export function getServiceQueue() {
 }
 
 export function getExpiringAmcs({ today, through }) {
-  return rows(client().from('amc_cycles').select(amcFields).eq('status', 'Active').gte('end_date', today).lte('end_date', through).order('end_date').order('amc_code').limit(5))
+  return rows(client().from('amc_cycles_effective').select(amcFields).eq('effective_status', 'Active').gte('end_date', today).lte('end_date', through).order('end_date').order('amc_code').limit(5))
 }
 
 export function getExpiringWarranties({ today, through }) {
