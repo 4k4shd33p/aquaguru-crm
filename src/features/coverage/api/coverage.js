@@ -53,6 +53,13 @@ export async function getAmcCycles({ page = 1, pageSize = 25, search = '', statu
 
 export async function getAmcCycle(id) { const { data, error } = await client().from('amc_cycles_effective').select(amcFields).eq('id', id).single(); if (error) throw error; return { ...data, totals: amcTotals(data) } }
 
+export async function getCompletedInitialInstallationDate(equipmentId) {
+  if (!equipmentId) return null
+  const { data, error } = await client().from('installations').select('installation_date').eq('equipment_id', equipmentId).eq('installation_classification', 'Initial Installation').eq('status', 'Completed').maybeSingle()
+  if (error) throw error
+  return data?.installation_date ?? null
+}
+
 export async function searchAmcEquipment(search) {
   const term = safeTerm(search); if (term.length < 2) return []
   const { data, error } = await client().from('equipment').select(equipmentFields).or(`equipment_code.ilike.%${term}%,serial_number.ilike.%${term}%`).order('equipment_code').limit(10)
