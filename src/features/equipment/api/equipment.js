@@ -77,13 +77,7 @@ export async function searchEquipmentCustomers(search) {
   const term = search.trim()
   if (!term) return []
   const { data, error } = await requireClient().rpc('search_customers', {
-    p_search_text: term,
-    p_customer_type_id: null,
-    p_is_active: null,
-    p_city: null,
-    p_area: null,
-    p_offset: 0,
-    p_limit: 10,
+    p_search_text: term, p_customer_type_id: null, p_is_active: null, p_city: null, p_area: null, p_offset: 0, p_limit: 10,
   })
   if (error) throw error
   return (data ?? []).map(({ id, customer_code, name, phone, is_active }) => ({ id, customer_code, name, phone, is_active }))
@@ -108,6 +102,17 @@ export async function getEquipmentComponents(equipmentId) {
   return (data ?? []).filter((component) => component.parts?.equipment_tracking_enabled)
 }
 
+export async function getEquipmentLocationHistory(equipmentId) {
+  const { data, error } = await requireClient().from('equipment_location_history').select(`
+    id, equipment_id, old_location_id, new_location_id, movement_date, source, source_service_id, notes, created_at,
+    old_location:locations!equipment_location_history_old_location_id_fkey ( id, location_name, area, city, pincode ),
+    new_location:locations!equipment_location_history_new_location_id_fkey ( id, location_name, area, city, pincode ),
+    source_service:services!equipment_location_history_source_service_id_fkey ( id, service_code )
+  `).eq('equipment_id', equipmentId).order('movement_date', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
 export async function getTrackedComponentParts() {
   const { data, error } = await requireClient().from('parts').select('id, part_code, name, brand, model, component_role_id, component_roles ( id, name )').eq('is_active', true).eq('equipment_tracking_enabled', true).not('component_role_id', 'is', null).order('name')
   if (error) throw error
@@ -116,11 +121,7 @@ export async function getTrackedComponentParts() {
 
 export async function recordExistingComponent({ equipmentId, values }) {
   const { data, error } = await requireClient().from('equipment_components').insert({
-    equipment_id: equipmentId,
-    component_role_id: values.component_role_id,
-    part_id: values.part_id,
-    installed_date: nullable(values.installed_date),
-    notes: nullable(values.notes),
+    equipment_id: equipmentId, component_role_id: values.component_role_id, part_id: values.part_id, installed_date: nullable(values.installed_date), notes: nullable(values.notes),
   }).select(componentFields).single()
   if (error) throw error
   return data
@@ -132,10 +133,32 @@ export async function createEquipment(values) {
   return data
 }
 
-export async function updateEquipment({ equipmentId, values }) {
-  const { data, error } = await requireClient().from('equipment').update(payload(values)).eq('id', equipmentId).select(equipmentFields).single()
+async function moveEquipmentLocation({ equipmentId, newLocationId }) {
+  const { error } = await requireClient().rpc('move_equipment_location', {
+    p_equipment_id: equipmentId, p_new_location_id: newLocationId, p_movement_date: null,
+    p_source: 'Manual equipment update', p_notes: null, p_source_service_id: null,
+  })
   if (error) throw error
-  return data
+}
+
+export async function updateEquipment({ equipmentId, values, currentLocationId, currentCustomerId }) {
+  const updates = payload(values)
+  const previousLocationId = nullable(currentLocationId)
+  const nextLocationId = updates.location_id
+  const locationChanged = previousLocationId !== nextLocationId
+
+  if (locationChanged && values.customer_id !== currentCustomerId) {
+    throw new Error('Change the equipment customer and location in separate updates.')
+  }
+  if (locationChanged && previousLocationId && !nextLocationId) {
+    throw new Error('A recorded equipment location cannot be removed. Select the correct location instead.')
+  }
+
+  if (locationChanged) delete updates.location_id
+  const { data, error } = await requireClient().from('equipment').update(updates).eq('id', equipmentId).select(equipmentFields).single()
+  if (error) throw error
+  if (locationChanged) await moveEquipmentLocation({ equipmentId, newLocationId: nextLocationId })
+  return locationChanged ? getEquipmentById(equipmentId) : data
 }
 
 export async function decommissionEquipment(equipmentId) {

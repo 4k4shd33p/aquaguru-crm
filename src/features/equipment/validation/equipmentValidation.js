@@ -1,6 +1,10 @@
 export function equipmentSaveMessage(error) {
+  const message = error?.message?.toLowerCase() || ''
   if (error?.code === '23503') return 'The selected customer, location, equipment type, or product model is no longer available. Refresh and try again.'
-  if (error?.message?.toLowerCase().includes('location')) return 'Choose a location that belongs to the selected customer.'
+  if (message.includes('change the equipment customer')) return 'Change the equipment customer and location in separate updates.'
+  if (message.includes('cannot be removed')) return 'A recorded equipment location cannot be removed. Select the correct location instead.'
+  if (message.includes('already assigned')) return 'Equipment is already assigned to the selected location.'
+  if (message.includes('location')) return 'Choose a location that belongs to the selected customer.'
   return 'Equipment could not be saved. Please review the details and try again.'
 }
 

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createEquipment, decommissionEquipment, getCustomerEquipment, getEquipmentById, getEquipmentComponents, getEquipmentCustomerLocations, getEquipmentList, getEquipmentTypes, getProductModels, getTrackedComponentParts, recordExistingComponent, searchEquipmentCustomers, updateEquipment } from '../api/equipment'
+import { createEquipment, decommissionEquipment, getCustomerEquipment, getEquipmentById, getEquipmentComponents, getEquipmentCustomerLocations, getEquipmentList, getEquipmentLocationHistory, getEquipmentTypes, getProductModels, getTrackedComponentParts, recordExistingComponent, searchEquipmentCustomers, updateEquipment } from '../api/equipment'
 
 export const equipmentKeys = {
   all: ['equipment'],
@@ -10,6 +10,7 @@ export const equipmentKeys = {
   customerLookup: (term) => ['equipment', 'customer-lookup', term],
   customerLocations: (customerId) => ['equipment', 'customer-locations', customerId],
   components: (equipmentId) => ['equipment', 'components', equipmentId],
+  locationHistory: (equipmentId) => ['equipment', 'location-history', equipmentId],
   componentParts: ['equipment', 'component-parts'],
   byCustomer: (customerId) => ['equipment', 'customer', customerId],
 }
@@ -21,6 +22,7 @@ export function useProductModels(typeId) { return useQuery({ queryKey: equipment
 export function useEquipmentCustomerSearch(term) { return useQuery({ queryKey: equipmentKeys.customerLookup(term), queryFn: () => searchEquipmentCustomers(term), enabled: term.trim().length > 1, staleTime: 30 * 1000 }) }
 export function useEquipmentCustomerLocations(customerId) { return useQuery({ queryKey: equipmentKeys.customerLocations(customerId), queryFn: () => getEquipmentCustomerLocations(customerId), enabled: Boolean(customerId), staleTime: 60 * 1000 }) }
 export function useEquipmentComponents(equipmentId) { return useQuery({ queryKey: equipmentKeys.components(equipmentId), queryFn: () => getEquipmentComponents(equipmentId), enabled: Boolean(equipmentId) }) }
+export function useEquipmentLocationHistory(equipmentId) { return useQuery({ queryKey: equipmentKeys.locationHistory(equipmentId), queryFn: () => getEquipmentLocationHistory(equipmentId), enabled: Boolean(equipmentId) }) }
 export function useTrackedComponentParts() { return useQuery({ queryKey: equipmentKeys.componentParts, queryFn: getTrackedComponentParts, staleTime: 5 * 60 * 1000 }) }
 export function useCustomerEquipment(customerId) { return useQuery({ queryKey: equipmentKeys.byCustomer(customerId), queryFn: () => getCustomerEquipment(customerId), enabled: Boolean(customerId) }) }
 
@@ -32,6 +34,7 @@ function useEquipmentMutation(mutationFn) {
       const previousCustomerId = variables?.previousCustomerId
       queryClient.invalidateQueries({ queryKey: equipmentKeys.all })
       queryClient.invalidateQueries({ queryKey: equipmentKeys.detail(equipment.id) })
+      queryClient.invalidateQueries({ queryKey: equipmentKeys.locationHistory(equipment.id) })
       queryClient.invalidateQueries({ queryKey: equipmentKeys.byCustomer(equipment.customer_id) })
       if (previousCustomerId && previousCustomerId !== equipment.customer_id) queryClient.invalidateQueries({ queryKey: equipmentKeys.byCustomer(previousCustomerId) })
     },
@@ -46,8 +49,6 @@ export function useRecordExistingComponent() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: recordExistingComponent,
-    onSuccess: (_component, variables) => {
-      queryClient.invalidateQueries({ queryKey: equipmentKeys.components(variables.equipmentId) })
-    },
+    onSuccess: (_component, variables) => queryClient.invalidateQueries({ queryKey: equipmentKeys.components(variables.equipmentId) }),
   })
 }
