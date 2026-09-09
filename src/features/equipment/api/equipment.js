@@ -13,7 +13,8 @@ const equipmentFields = `
 const componentFields = `
   id, equipment_id, part_id, component_role_id, installed_date, removed_date, source_service_item_id, notes, created_at,
   parts ( id, part_code, name, brand, model, equipment_tracking_enabled ),
-  component_roles ( id, name )
+  component_roles ( id, name ),
+  source_service_item:service_items!equipment_components_source_service_item_fk ( id, services ( id, service_code ) )
 `
 
 function requireClient() {
@@ -102,9 +103,27 @@ export async function getCustomerEquipment(customerId) {
 }
 
 export async function getEquipmentComponents(equipmentId) {
-  const { data, error } = await requireClient().from('equipment_components').select(componentFields).eq('equipment_id', equipmentId).order('installed_date', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })
+  const { data, error } = await requireClient().from('equipment_components').select(componentFields).eq('equipment_id', equipmentId).order('removed_date', { ascending: true, nullsFirst: true }).order('installed_date', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })
   if (error) throw error
   return (data ?? []).filter((component) => component.parts?.equipment_tracking_enabled)
+}
+
+export async function getTrackedComponentParts() {
+  const { data, error } = await requireClient().from('parts').select('id, part_code, name, brand, model, component_role_id, component_roles ( id, name )').eq('is_active', true).eq('equipment_tracking_enabled', true).not('component_role_id', 'is', null).order('name')
+  if (error) throw error
+  return data ?? []
+}
+
+export async function recordExistingComponent({ equipmentId, values }) {
+  const { data, error } = await requireClient().from('equipment_components').insert({
+    equipment_id: equipmentId,
+    component_role_id: values.component_role_id,
+    part_id: values.part_id,
+    installed_date: nullable(values.installed_date),
+    notes: nullable(values.notes),
+  }).select(componentFields).single()
+  if (error) throw error
+  return data
 }
 
 export async function createEquipment(values) {

@@ -1,4 +1,4 @@
-import { ArrowLeft, MapPin, Pencil, UserRound } from 'lucide-react'
+import { ArrowLeft, MapPin, Pencil, Plus, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ErrorState } from '../components/feedback/ErrorState'
@@ -7,12 +7,13 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
 import { EquipmentComponents } from '../features/equipment/components/EquipmentComponents'
+import { RecordExistingComponentForm } from '../features/equipment/components/RecordExistingComponentForm'
 import { EquipmentCoverage } from '../features/coverage/components/EquipmentCoverage'
 import { EquipmentInstallationHistory } from '../features/installations/components/EquipmentInstallationHistory'
 import { EquipmentServiceHistory } from '../features/service/components/EquipmentServiceHistory'
 import { EquipmentForm } from '../features/equipment/components/EquipmentForm'
-import { useDecommissionEquipment, useEquipmentComponents, useEquipmentDetail, useUpdateEquipment } from '../features/equipment/hooks/useEquipment'
-import { equipmentSaveMessage } from '../features/equipment/validation/equipmentValidation'
+import { useDecommissionEquipment, useEquipmentComponents, useEquipmentDetail, useRecordExistingComponent, useTrackedComponentParts, useUpdateEquipment } from '../features/equipment/hooks/useEquipment'
+import { componentSaveMessage, equipmentSaveMessage } from '../features/equipment/validation/equipmentValidation'
 import { equipmentStatusTone, locationLabel, recorded } from '../features/equipment/utils/equipmentDisplay'
 
 function DetailItem({ label, value }) { return <div className="detail-item"><div><span>{label}</span><strong>{value || 'Not recorded'}</strong></div></div> }
@@ -22,10 +23,13 @@ export function EquipmentDetailPage() {
   const navigate = useNavigate()
   const equipmentQuery = useEquipmentDetail(equipmentId)
   const componentsQuery = useEquipmentComponents(equipmentId)
+  const componentPartsQuery = useTrackedComponentParts()
   const updateEquipment = useUpdateEquipment()
   const decommission = useDecommissionEquipment()
+  const recordExistingComponent = useRecordExistingComponent()
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDecommissionOpen, setIsDecommissionOpen] = useState(false)
+  const [isRecordComponentOpen, setIsRecordComponentOpen] = useState(false)
   const [formError, setFormError] = useState('')
 
   if (equipmentQuery.isLoading) return <div className="detail-loading">Loading equipment…</div>
@@ -34,11 +38,11 @@ export function EquipmentDetailPage() {
   const saleOrigin = equipment.sale_items?.sales
   async function saveEquipment(values) { setFormError(''); try { await updateEquipment.mutateAsync({ equipmentId, values, previousCustomerId: equipment.customer_id }); setIsEditOpen(false) } catch (error) { setFormError(equipmentSaveMessage(error)) } }
   async function confirmDecommission() { setFormError(''); try { await decommission.mutateAsync(equipmentId); setIsDecommissionOpen(false) } catch { setFormError('Equipment could not be decommissioned. Please try again.') } }
+  async function saveExistingComponent(values) { setFormError(''); try { await recordExistingComponent.mutateAsync({ equipmentId, values }); setIsRecordComponentOpen(false) } catch (error) { setFormError(componentSaveMessage(error)) } }
 
-  return <div className="equipment-detail"><Link className="back-link" to="/equipment"><ArrowLeft size={17} />Equipment</Link><header className="customer-detail__header"><div><span className="eyebrow">Equipment</span><h2>{equipment.equipment_code}</h2><p>{recorded(equipment.equipment_types?.name)} <span>·</span> {recorded(equipment.product_models?.model_name)}</p><div className="customer-detail__contact">{equipment.serial_number ? `Serial number: ${equipment.serial_number}` : 'Serial number not recorded'}</div></div><div className="customer-detail__actions"><Badge tone={equipmentStatusTone(equipment.status)}>{equipment.status}</Badge><Button variant="secondary" onClick={() => { setFormError(''); setIsEditOpen(true) }}><Pencil size={16} />Edit Equipment</Button>{equipment.status !== 'Decommissioned' && <Button variant="secondary" onClick={() => { setFormError(''); setIsDecommissionOpen(true) }}>Decommission</Button>}</div></header><div className="equipment-detail__layout"><Card className="equipment-overview"><div className="section-heading"><div><h2>Overview</h2><p>Core equipment information.</p></div></div><div className="customer-overview__grid"><DetailItem label="Equipment type" value={equipment.equipment_types?.name} /><DetailItem label="Product model" value={equipment.product_models?.model_name} /><DetailItem label="Source" value={equipment.source} />{saleOrigin && <><DetailItem label="Origin" value="Aquaguru Sale" /><DetailItem label="Sale" value={<Link className="table-view-link" to={`/sales/${saleOrigin.id}`}>{saleOrigin.sale_code}</Link>} /></>}<DetailItem label="Serial number" value={equipment.serial_number} /><DetailItem label="Customer" value={<Link className="table-view-link" to={`/customers/${equipment.customer_id}`}><UserRound size={15} />{recorded(equipment.customers?.name)}</Link>} /><DetailItem label="Location" value={<span className="equipment-location"><MapPin size={15} />{locationLabel(equipment.locations)}</span>} /><DetailItem label="Notes" value={equipment.notes} /></div></Card><EquipmentInstallationHistory equipmentId={equipmentId} /><EquipmentCoverage equipmentId={equipmentId} /><EquipmentComponents components={componentsQuery.data ?? []} isLoading={componentsQuery.isLoading} /><EquipmentServiceHistory equipmentId={equipmentId} /></div>
+  return <div className="equipment-detail"><Link className="back-link" to="/equipment"><ArrowLeft size={17} />Equipment</Link><header className="customer-detail__header"><div><span className="eyebrow">Equipment</span><h2>{equipment.equipment_code}</h2><p>{recorded(equipment.equipment_types?.name)} <span>·</span> {recorded(equipment.product_models?.model_name)}</p><div className="customer-detail__contact">{equipment.serial_number ? `Serial number: ${equipment.serial_number}` : 'Serial number not recorded'}</div></div><div className="customer-detail__actions"><Badge tone={equipmentStatusTone(equipment.status)}>{equipment.status}</Badge><Button variant="secondary" onClick={() => { setFormError(''); setIsRecordComponentOpen(true) }}><Plus size={16} />Record Existing Component</Button><Button variant="secondary" onClick={() => { setFormError(''); setIsEditOpen(true) }}><Pencil size={16} />Edit Equipment</Button>{equipment.status !== 'Decommissioned' && <Button variant="secondary" onClick={() => { setFormError(''); setIsDecommissionOpen(true) }}>Decommission</Button>}</div></header><div className="equipment-detail__layout"><Card className="equipment-overview"><div className="section-heading"><div><h2>Overview</h2><p>Core equipment information.</p></div></div><div className="customer-overview__grid"><DetailItem label="Equipment type" value={equipment.equipment_types?.name} /><DetailItem label="Product model" value={equipment.product_models?.model_name} /><DetailItem label="Source" value={equipment.source} />{saleOrigin && <><DetailItem label="Origin" value="Aquaguru Sale" /><DetailItem label="Sale" value={<Link className="table-view-link" to={`/sales/${saleOrigin.id}`}>{saleOrigin.sale_code}</Link>} /></>}<DetailItem label="Serial number" value={equipment.serial_number} /><DetailItem label="Customer" value={<Link className="table-view-link" to={`/customers/${equipment.customer_id}`}><UserRound size={15} />{recorded(equipment.customers?.name)}</Link>} /><DetailItem label="Location" value={<span className="equipment-location"><MapPin size={15} />{locationLabel(equipment.locations)}</span>} /><DetailItem label="Notes" value={equipment.notes} /></div></Card><EquipmentInstallationHistory equipmentId={equipmentId} /><EquipmentCoverage equipmentId={equipmentId} /><EquipmentComponents components={componentsQuery.data ?? []} isLoading={componentsQuery.isLoading} /><EquipmentServiceHistory equipmentId={equipmentId} /></div>
     {isEditOpen && <Modal title="Edit equipment" description="Equipment code cannot be changed." onClose={() => setIsEditOpen(false)}>{formError && <p className="form-message" role="alert">{formError}</p>}<EquipmentForm equipment={equipment} onCancel={() => setIsEditOpen(false)} onSave={saveEquipment} isSaving={updateEquipment.isPending} /></Modal>}
+    {isRecordComponentOpen && <Modal title="Record Existing Component" description="Record a component already present; this is not a replacement." onClose={() => setIsRecordComponentOpen(false)}>{formError && <p className="form-message" role="alert">{formError}</p>}{componentPartsQuery.isLoading ? <p className="detail-loading">Loading tracked parts…</p> : componentPartsQuery.isError ? <p className="form-message" role="alert">Tracked parts could not be loaded. Please try again.</p> : <RecordExistingComponentForm equipment={equipment} parts={componentPartsQuery.data ?? []} components={componentsQuery.data ?? []} onCancel={() => setIsRecordComponentOpen(false)} onSave={saveExistingComponent} isSaving={recordExistingComponent.isPending} />}</Modal>}
     {isDecommissionOpen && <Modal title="Decommission equipment" description="This safely marks the equipment as decommissioned." onClose={() => setIsDecommissionOpen(false)}>{formError && <p className="form-message" role="alert">{formError}</p>}<div className="crm-form"><p className="decommission-copy">Sales, service, and component history will remain preserved. This equipment will no longer be active.</p><div className="form-actions"><Button variant="secondary" onClick={() => setIsDecommissionOpen(false)} disabled={decommission.isPending}>Cancel</Button><Button onClick={confirmDecommission} disabled={decommission.isPending}>{decommission.isPending ? 'Decommissioning…' : 'Decommission equipment'}</Button></div></div></Modal>}
   </div>
 }
-
-
