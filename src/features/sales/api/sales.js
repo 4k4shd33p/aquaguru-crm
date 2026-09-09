@@ -4,7 +4,7 @@ const saleFields = `id, sale_code, customer_id, sale_date, invoice_number, invoi
   customers ( id, customer_code, name, phone ), lead_sources ( id, name ),
   sale_items ( id, product_model_id, quantity, standard_unit_price, actual_unit_price, unit_cost, discount, warranty_months, notes, product_models ( id, product_code, model_name ) ),
   sale_payments ( id, payment_code, payment_date, amount, reference_number, notes, payment_methods ( id, name ) ),
-  emi_accounts ( id, emi_code, total_financed_amount, expected_payment_amount, expected_payment_frequency, expected_payment_day, start_date, end_date, status, notes, emi_payments ( id, payment_code, payment_date, amount, reference_number, notes, payment_methods ( id, name ) ) )`
+  emi_accounts ( id, emi_code, total_financed_amount, expected_payment_amount, expected_payment_frequency, expected_payment_day, start_date, end_date, status, notes, emi_payments ( id, payment_code, payment_date, amount, reference_number, notes, payment_methods ( id, name ) ) ),\n  sale_corrections ( id, correction_note, corrected_at, corrected_by )`
 
 const client = () => { if (!supabase) throw new Error('Supabase is not configured.'); return supabase }
 const nil = (value) => typeof value === 'string' ? value.trim() || null : value ?? null
@@ -80,6 +80,28 @@ export async function createAtomicSale(values) {
   const saleId = data?.[0]?.sale_id
   if (!saleId) throw new Error('The sale was created but no sale reference was returned.')
   return { saleId, rows: data ?? [] }
+}
+
+export async function correctSale({ saleId, values }) {
+  const { data, error } = await client().rpc('correct_sale', {
+    p_sale_id: saleId,
+    p_sale_date: values.sale_date,
+    p_lead_source_id: values.lead_source_id || null,
+    p_invoice_number: nil(values.invoice_number),
+    p_invoice_date: values.invoice_date || null,
+    p_source_detail: nil(values.source_detail),
+    p_notes: nil(values.notes),
+    p_items: values.items.map((item) => ({
+      id: item.id,
+      standard_unit_price: numberOrNull(item.standard_unit_price),
+      actual_unit_price: Number(item.actual_unit_price),
+      unit_cost: numberOrNull(item.unit_cost),
+      warranty_months: numberOrNull(item.warranty_months),
+    })),
+    p_correction_note: nil(values.correction_note),
+  })
+  if (error) throw error
+  return data?.[0] ?? null
 }
 
 export async function addSalePayment({ saleId, values }) {

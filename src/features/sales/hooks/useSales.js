@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addEmiPayment, addSalePayment, createAtomicSale, createEmiAccount, getActiveCustomerLocations, getCustomerSales, getSale, getSaleLookups, getSales, searchSaleCustomers } from '../api/sales'
+import { addEmiPayment, addSalePayment, correctSale, createAtomicSale, createEmiAccount, getActiveCustomerLocations, getCustomerSales, getSale, getSaleLookups, getSales, searchSaleCustomers } from '../api/sales'
 
 export const saleKeys = { all: ['sales'], list: (filters) => ['sales', 'list', filters], detail: (id) => ['sales', 'detail', id], lookups: ['sales', 'lookups'], customers: (term) => ['sales', 'customers', term], locations: (id) => ['sales', 'locations', id], customer: (id) => ['sales', 'customer', id] }
 export const useSales = (filters) => useQuery({ queryKey: saleKeys.list(filters), queryFn: () => getSales(filters), placeholderData: (previous) => previous })
@@ -24,6 +24,6 @@ function mutation(mutationFn) {
   })
 }
 export const useCreateSale = () => mutation(createAtomicSale)
-export const useAddSalePayment = () => mutation(addSalePayment)
+export const useCorrectSale = () => mutation(correctSale)\nexport const useAddSalePayment = () => mutation(addSalePayment)
 export const useCreateEmiAccount = () => mutation(createEmiAccount)
 export const useAddEmiPayment = () => mutation(addEmiPayment)
