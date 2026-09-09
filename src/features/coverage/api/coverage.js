@@ -7,10 +7,10 @@ const numberOrNull = (value) => value === '' || value === undefined || value ===
 const equipmentFields = `id, equipment_code, serial_number, status, source, customer_id, location_id,
   customers ( id, customer_code, name ), locations ( id, location_name, area, city, pincode ),
   product_models ( id, product_code, model_name ), equipment_types ( id, name )`
-const warrantyFields = `id, warranty_code, equipment_id, sale_id, installation_id, start_date, end_date, duration_months, planned_visits, status, effective_status, notes, created_at,
+const warrantyFields = `id, warranty_code, equipment_id, sale_id, installation_id, start_date, end_date, duration_months, planned_visits, status, notes, created_at,
   equipment ( ${equipmentFields} ), sales ( id, sale_code ), installations ( id, installation_code, installation_date ),
   services ( id, service_code, service_date, status, technician_charge, service_types ( name ) )`
-const amcFields = `id, amc_code, equipment_id, cycle_number, start_date, end_date, standard_price, agreed_price, planned_visits, status, notes, created_at,
+const amcFields = `id, amc_code, equipment_id, cycle_number, start_date, end_date, standard_price, agreed_price, planned_visits, status, effective_status, notes, created_at,
   equipment ( ${equipmentFields} ),
   amc_payments ( id, payment_code, payment_date, amount, reference_number, notes, payment_methods ( id, name ) ),
   services ( id, service_code, service_date, status, technician_charge, service_types ( name ) )`
@@ -30,7 +30,7 @@ export function amcTotals(amc) {
 export async function getEquipmentWarranties({ page = 1, pageSize = 25, search = '', status = '', fromDate = '', toDate = '' }) {
   const [from, to] = pageRange(page, pageSize)
   let query = client().from('equipment_warranties').select(warrantyFields, { count: 'exact' }).order('start_date', { ascending: false }).range(from, to)
-  if (status) query = query.eq('effective_status', status)
+  if (status) query = query.eq('status', status)
   if (fromDate) query = query.gte('start_date', fromDate)
   if (toDate) query = query.lte('end_date', toDate)
   const term = safeTerm(search); if (term) query = query.ilike('warranty_code', `%${term}%`)
@@ -43,7 +43,7 @@ export async function getEquipmentWarranty(id) { const { data, error } = await c
 export async function getAmcCycles({ page = 1, pageSize = 25, search = '', status = '', fromDate = '', toDate = '' }) {
   const [from, to] = pageRange(page, pageSize)
   let query = client().from('amc_cycles_effective').select(amcFields, { count: 'exact' }).order('start_date', { ascending: false }).range(from, to)
-  if (status) query = query.eq('status', status)
+  if (status) query = query.eq('effective_status', status)
   if (fromDate) query = query.gte('start_date', fromDate)
   if (toDate) query = query.lte('end_date', toDate)
   const term = safeTerm(search); if (term) query = query.ilike('amc_code', `%${term}%`)
