@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addServicePayment, correctService, createAtomicService, getEquipmentCoverage, getServiceCustomerLocations, getEquipmentServices, getPartWarranties, getService, getServiceLookups, getServices, searchServiceEquipment } from '../api/service'
+import { addServicePayment, amendService, correctService, createAtomicService, getEquipmentCoverage, getServiceCustomerLocations, getEquipmentServices, getPartWarranties, getService, getServiceLookups, getServices, searchServiceEquipment } from '../api/service'
 
 export const serviceKeys = { all: ['service'], list: (filters) => ['service', 'list', filters], detail: (id) => ['service', 'detail', id], lookups: ['service', 'lookups'], equipmentSearch: (term) => ['service', 'equipment-search', term], coverage: (id, date) => ['service', 'coverage', id, date], partWarranty: (equipmentId, partId, date) => ['service', 'part-warranty', equipmentId, partId, date], equipmentHistory: (id) => ['service', 'equipment-history', id], customerLocations: (id) => ['service', 'customer-locations', id] }
 export const useServices = (filters) => useQuery({ queryKey: serviceKeys.list(filters), queryFn: () => getServices(filters), placeholderData: (previous) => previous })
@@ -14,4 +14,5 @@ function mutation(mutationFn) { const queryClient = useQueryClient(); return use
 export const useCreateService = () => mutation(createAtomicService)
 export const useAddServicePayment = () => mutation(addServicePayment)
 export const useCorrectService = () => mutation(correctService)
+export const useAmendService = () => mutation(amendService)
 
