@@ -21,6 +21,8 @@ const partWarrantyFields = `id, part_warranty_code, service_item_id, equipment_i
 function safeTerm(value) { return value.trim().replace(/[%,_(),]/g, ' ') }
 function pageRange(page, pageSize) { return [(page - 1) * pageSize, page * pageSize - 1] }
 
+export function effectiveAmcStatus(amc) { if (amc.status !== 'Active') return amc.status; return amc.end_date && amc.end_date < new Date().toLocaleDateString('en-CA') ? 'Expired' : 'Active' }
+
 export function amcTotals(amc) {
   const collected = (amc.amc_payments ?? []).filter((payment) => (payment.payment_status ?? 'Valid') === 'Valid').reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
   const agreed = amc.agreed_price === null || amc.agreed_price === undefined ? null : Number(amc.agreed_price)
@@ -42,16 +44,17 @@ export async function getEquipmentWarranty(id) { const { data, error } = await c
 
 export async function getAmcCycles({ page = 1, pageSize = 25, search = '', status = '', fromDate = '', toDate = '' }) {
   const [from, to] = pageRange(page, pageSize)
-  let query = client().from('amc_cycles_effective').select(amcFields, { count: 'exact' }).order('start_date', { ascending: false }).range(from, to)
-  if (status) query = query.eq('effective_status', status)
+  let query = client().from('amc_cycles').select(amcFields, { count: 'exact' }).order('start_date', { ascending: false }).range(from, to)
+  if (status === 'Expired') query = query.eq('status', 'Active').lt('end_date', new Date().toLocaleDateString('en-CA'))
+  else if (status) query = query.eq('status', status)
   if (fromDate) query = query.gte('start_date', fromDate)
   if (toDate) query = query.lte('end_date', toDate)
   const term = safeTerm(search); if (term) query = query.ilike('amc_code', `%${term}%`)
   const { data, error, count } = await query; if (error) throw error
-  return { rows: (data ?? []).map((row) => ({ ...row, totals: amcTotals(row) })), count: count ?? 0 }
+  return { rows: (data ?? []).map((row) => ({ ...row, effective_status: effectiveAmcStatus(row), totals: amcTotals(row) })), count: count ?? 0 }
 }
 
-export async function getAmcCycle(id) { const { data, error } = await client().from('amc_cycles_effective').select(amcFields).eq('id', id).single(); if (error) throw error; return { ...data, totals: amcTotals(data) } }
+export async function getAmcCycle(id) { const { data, error } = await client().from('amc_cycles').select(amcFields).eq('id', id).single(); if (error) throw error; return { ...data, effective_status: effectiveAmcStatus(data), totals: amcTotals(data) } }
 
 export async function getCompletedInitialInstallationDate(equipmentId) {
   if (!equipmentId) return null
@@ -103,7 +106,7 @@ export async function getPartWarranty(id) {
 export async function getEquipmentCoverage(equipmentId) {
   const [warranty, amc, parts] = await Promise.all([
     client().from('equipment_warranties').select('id, warranty_code, start_date, end_date, status').eq('equipment_id', equipmentId).eq('status', 'Active').order('end_date').limit(1),
-    client().from('amc_cycles_effective').select('id, amc_code, start_date, end_date, status, effective_status').eq('equipment_id', equipmentId).eq('effective_status', 'Active').order('end_date').limit(1),
+    client().from('amc_cycles').select('id, amc_code, start_date, end_date, status').eq('equipment_id', equipmentId).eq('status', 'Active').gte('end_date', new Date().toLocaleDateString('en-CA')).order('end_date').limit(1),
     client().from('service_item_warranties').select('id, part_warranty_code, start_date, end_date, status, parts ( name )').eq('equipment_id', equipmentId).eq('status', 'Active').order('end_date').limit(4),
   ])
   if (warranty.error || amc.error || parts.error) throw warranty.error || amc.error || parts.error
