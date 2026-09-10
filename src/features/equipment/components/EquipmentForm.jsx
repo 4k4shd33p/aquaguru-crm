@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Button } from '../../../components/ui/Button'
 import { useDebouncedValue } from '../../customers/hooks/useDebouncedValue'
-import { useEquipmentCustomerLocations, useEquipmentCustomerSearch, useEquipmentTypes, useProductModels } from '../hooks/useEquipment'
+import { useCustomerEquipment, useEquipmentCustomerLocations, useEquipmentCustomerSearch, useEquipmentTypes, useProductModels } from '../hooks/useEquipment'
 import { equipmentSources, equipmentStatuses, locationLabel } from '../utils/equipmentDisplay'
 
 function initialValues(equipment) {
@@ -23,6 +23,7 @@ export function EquipmentForm({ equipment, initialCustomer, onCancel, onSave, is
   const locationId = watch('location_id') || ''
   const typeId = watch('equipment_type_id') || ''
   const productModelId = watch('product_model_id') || ''
+  const serialNumber = watch('serial_number') || ''
   const selectedCustomer = equipment?.customers && equipment.customer_id === customerId ? equipment.customers : initialCustomer?.id === customerId ? initialCustomer : null
   const [customerSearch, setCustomerSearch] = useState(selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.customer_code})` : '')
   const debouncedCustomerSearch = useDebouncedValue(customerSearch)
@@ -30,6 +31,7 @@ export function EquipmentForm({ equipment, initialCustomer, onCancel, onSave, is
   const locationsQuery = useEquipmentCustomerLocations(customerId)
   const typesQuery = useEquipmentTypes()
   const modelsQuery = useProductModels(typeId)
+  const customerEquipment = useCustomerEquipment(customerId)
   const locations = locationsQuery.data ?? []
   const types = typesQuery.data ?? []
   const models = modelsQuery.data ?? []
@@ -73,6 +75,12 @@ export function EquipmentForm({ equipment, initialCustomer, onCancel, onSave, is
   const showSavedLocation = needsSavedOption(locations, locationId)
   const showSavedType = needsSavedOption(types, typeId)
   const showSavedModel = needsSavedOption(models, productModelId)
+  const standaloneSources = equipmentSources.filter((source) => source !== 'Aquaguru Sale')
+  const matchingEquipment = !equipment ? (customerEquipment.data ?? []).filter((item) => {
+    const sameSerial = Boolean(serialNumber && item.serial_number && serialNumber.trim().toLowerCase() === item.serial_number.trim().toLowerCase())
+    const sameContext = Boolean(locationId && item.location_id === locationId && ((productModelId && item.product_model_id === productModelId) || (!productModelId && typeId && item.equipment_type_id === typeId)))
+    return sameSerial || sameContext
+  }) : []
 
   return <form className="crm-form equipment-form" onSubmit={handleSubmit(submit)}>
     <div className="form-grid">
@@ -85,11 +93,13 @@ export function EquipmentForm({ equipment, initialCustomer, onCancel, onSave, is
       <label className="form-field"><span>Location</span><select {...register('location_id')} value={locationId} disabled={!customerId || locationsQuery.isLoading}><option value="">No location / Not assigned yet</option>{showSavedLocation && <option value={locationId}>{locationLabel(equipment?.locations) || 'Saved location'}</option>}{locations.map((location) => <option value={location.id} key={location.id}>{locationLabel(location)}</option>)}</select><small className="form-field__hint">Only active locations for the selected customer are shown.</small></label>
       <label className="form-field"><span>Equipment type</span><select {...register('equipment_type_id')} value={typeId} disabled={typesQuery.isLoading}><option value="">Not recorded</option>{showSavedType && <option value={typeId}>{equipment?.equipment_types?.name || 'Saved equipment type'}</option>}{types.map((type) => <option value={type.id} key={type.id}>{type.name}</option>)}</select></label>
       <label className="form-field"><span>Product model</span><select {...register('product_model_id')} value={productModelId} disabled={modelsQuery.isLoading}><option value="">Not recorded</option>{showSavedModel && <option value={productModelId}>{equipment?.product_models?.model_name || 'Saved product model'}</option>}{models.map((model) => <option value={model.id} key={model.id}>{model.model_name}</option>)}</select><small className="form-field__hint">Optional; choices match the selected equipment type.</small></label>
-      <label className="form-field"><span>Source</span><select {...register('source')}>{equipmentSources.map((source) => <option value={source} key={source}>{source}</option>)}</select></label>
+      <label className="form-field"><span>Source</span><select {...register('source')}>{(equipment ? equipmentSources : standaloneSources).map((source) => <option value={source} key={source}>{source}</option>)}</select>{!equipment && <small className="form-field__hint">Standalone equipment cannot be marked as an Aquaguru Sale.</small>}</label>
       <label className="form-field"><span>Status</span><select {...register('status')}>{equipmentStatuses.map((status) => <option value={status} key={status}>{status}</option>)}</select></label>
       <label className="form-field form-field--wide"><span>Serial number</span><input {...register('serial_number')} placeholder="Not recorded" /></label>
       <label className="form-field form-field--wide"><span>Notes</span><textarea {...register('notes')} rows="3" placeholder="Optional equipment notes" /></label>
     </div>
+    {matchingEquipment.length > 0 && <p className="form-message form-message--warning"><strong>Possible duplicate:</strong> {matchingEquipment.map((item) => item.equipment_code).join(', ')} is already recorded for this customer. Review it before creating another equipment record.</p>}
     <div className="form-actions"><Button variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button><Button type="submit" disabled={isSaving}>{isSaving ? 'Saving…' : equipment ? 'Save changes' : 'Create equipment'}</Button></div>
   </form>
 }
+
