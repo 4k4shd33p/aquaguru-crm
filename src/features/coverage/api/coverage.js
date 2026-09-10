@@ -10,7 +10,7 @@ const equipmentFields = `id, equipment_code, serial_number, status, source, cust
 const warrantyFields = `id, warranty_code, equipment_id, sale_id, installation_id, start_date, end_date, duration_months, planned_visits, status, notes, created_at,
   equipment ( ${equipmentFields} ), sales ( id, sale_code ), installations ( id, installation_code, installation_date ),
   services ( id, service_code, service_date, status, technician_charge, service_types ( name ) )`
-const amcFields = `id, amc_code, equipment_id, cycle_number, start_date, end_date, standard_price, agreed_price, planned_visits, status, effective_status, notes, created_at,
+const amcFields = `id, amc_code, equipment_id, cycle_number, start_date, end_date, standard_price, agreed_price, planned_visits, status, notes, created_at,
   equipment ( ${equipmentFields} ),
   amc_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, correction_of_payment: amc_payments!amc_payments_correction_of_payment_id_fkey ( id, payment_code ), corrected_by_payment: amc_payments!amc_payments_corrected_by_payment_id_fkey ( id, payment_code ), payment_methods ( id, name ) ),
   services ( id, service_code, service_date, status, technician_charge, service_types ( name ) )`
@@ -21,13 +21,12 @@ const partWarrantyFields = `id, part_warranty_code, service_item_id, equipment_i
 function safeTerm(value) { return value.trim().replace(/[%,_(),]/g, ' ') }
 function pageRange(page, pageSize) { return [(page - 1) * pageSize, page * pageSize - 1] }
 
-export function effectiveAmcStatus(amc) { if (amc.status !== 'Active') return amc.status; return amc.end_date && amc.end_date < new Date().toLocaleDateString('en-CA') ? 'Expired' : 'Active' }
-
 export function amcTotals(amc) {
   const collected = (amc.amc_payments ?? []).filter((payment) => (payment.payment_status ?? 'Valid') === 'Valid').reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
   const agreed = amc.agreed_price === null || amc.agreed_price === undefined ? null : Number(amc.agreed_price)
   return { collected, outstanding: agreed === null ? null : agreed - collected, agreed }
 }
+export function effectiveAmcStatus(amc) { if (amc.status !== 'Active') return amc.status; return amc.end_date && amc.end_date < new Date().toLocaleDateString('en-CA') ? 'Expired' : 'Active' }
 
 export async function getEquipmentWarranties({ page = 1, pageSize = 25, search = '', status = '', fromDate = '', toDate = '' }) {
   const [from, to] = pageRange(page, pageSize)
@@ -54,7 +53,15 @@ export async function getAmcCycles({ page = 1, pageSize = 25, search = '', statu
   return { rows: (data ?? []).map((row) => ({ ...row, effective_status: effectiveAmcStatus(row), totals: amcTotals(row) })), count: count ?? 0 }
 }
 
-export async function getAmcCycle(id) { const { data, error } = await client().from('amc_cycles').select(amcFields).eq('id', id).single(); if (error) throw error; return { ...data, effective_status: effectiveAmcStatus(data), totals: amcTotals(data) } }
+export async function getAmcCycle(id) {
+  const [cycle, corrections] = await Promise.all([
+    client().from('amc_cycles').select(amcFields).eq('id', id).single(),
+    client().from('amc_corrections').select('id, correction_reason, before_snapshot, after_snapshot, corrected_at').eq('amc_cycle_id', id).order('corrected_at', { ascending: false }),
+  ])
+  if (cycle.error) throw cycle.error
+  if (corrections.error) throw corrections.error
+  return { ...cycle.data, effective_status: effectiveAmcStatus(cycle.data), totals: amcTotals(cycle.data), corrections: corrections.data ?? [] }
+}
 
 export async function getCompletedInitialInstallationDate(equipmentId) {
   if (!equipmentId) return null
@@ -77,6 +84,17 @@ export async function createAmcCycle(values) {
   })
   if (error) throw error
   const result = data?.[0]; if (!result?.amc_cycle_id) throw new Error('The AMC was saved but no AMC reference was returned.')
+  return result
+}
+
+export async function correctAmcCycle({ amcCycleId, values }) {
+  const { data, error } = await client().rpc('correct_amc_cycle', {
+    p_amc_cycle_id: amcCycleId, p_start_date: values.startDate, p_end_date: values.endDate,
+    p_agreed_price: numberOrNull(values.agreedPrice), p_notes: nil(values.notes), p_correction_reason: nil(values.correctionReason),
+  })
+  if (error) throw error
+  const result = data?.[0]
+  if (!result?.amc_cycle_id) throw new Error('The AMC correction was not confirmed.')
   return result
 }
 
@@ -104,12 +122,15 @@ export async function getPartWarranty(id) {
 }
 
 export async function getEquipmentCoverage(equipmentId) {
-  const [warranty, amc, parts] = await Promise.all([
-    client().from('equipment_warranties').select('id, warranty_code, start_date, end_date, status').eq('equipment_id', equipmentId).eq('status', 'Active').order('end_date').limit(1),
-    client().from('amc_cycles').select('id, amc_code, start_date, end_date, status').eq('equipment_id', equipmentId).eq('status', 'Active').gte('end_date', new Date().toLocaleDateString('en-CA')).order('end_date').limit(1),
+  const [warranties, amcs, parts] = await Promise.all([
+    client().from('equipment_warranties').select('id, warranty_code, start_date, end_date, status').eq('equipment_id', equipmentId).order('end_date', { ascending: false }).limit(10),
+    client().from('amc_cycles').select('id, amc_code, start_date, end_date, status, agreed_price, amc_payments ( amount, payment_status )').eq('equipment_id', equipmentId).order('end_date', { ascending: false }).limit(10),
     client().from('service_item_warranties').select('id, part_warranty_code, start_date, end_date, status, parts ( name )').eq('equipment_id', equipmentId).eq('status', 'Active').order('end_date').limit(4),
   ])
-  if (warranty.error || amc.error || parts.error) throw warranty.error || amc.error || parts.error
-  return { warranty: warranty.data?.[0] ?? null, amc: amc.data?.[0] ?? null, partWarranties: parts.data ?? [] }
+  if (warranties.error || amcs.error || parts.error) throw warranties.error || amcs.error || parts.error
+  const warrantyHistory = warranties.data ?? []
+  const amcHistory = (amcs.data ?? []).map((row) => ({ ...row, effective_status: effectiveAmcStatus(row), totals: amcTotals(row) }))
+  return { warranty: warrantyHistory.find((item) => item.status === 'Active') ?? null, historicalWarranty: warrantyHistory[0] ?? null, amc: amcHistory.find((item) => item.effective_status === 'Active') ?? null, historicalAmc: amcHistory[0] ?? null, partWarranties: parts.data ?? [] }
 }
+
 

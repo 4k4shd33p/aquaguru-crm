@@ -12,4 +12,6 @@ export const useEquipmentCoverage = (id) => useQuery({ queryKey: coverageKeys.eq
 export const usePaymentMethods = () => useQuery({ queryKey: coverageKeys.methods, queryFn: api.getPaymentMethods })
 export function useCreateAmc() { const qc = useQueryClient(); return useMutation({ mutationFn: api.createAmcCycle, onSuccess: (result, values) => { qc.invalidateQueries({ queryKey: ['coverage', 'amcs'] }); qc.invalidateQueries({ queryKey: coverageKeys.amc(result.amc_cycle_id) }); qc.invalidateQueries({ queryKey: coverageKeys.equipment(values.equipmentId) }); qc.invalidateQueries({ queryKey: ['equipment', values.equipmentId] }) } }) }
 export function useAddAmcPayment() { const qc = useQueryClient(); return useMutation({ mutationFn: api.addAmcPayment, onSuccess: (_, values) => { qc.invalidateQueries({ queryKey: coverageKeys.amc(values.amcCycleId) }); qc.invalidateQueries({ queryKey: ['coverage', 'amcs'] }) } }) }
+export function useCorrectAmcCycle() { const qc = useQueryClient(); return useMutation({ mutationFn: api.correctAmcCycle, onSuccess: (_, values) => { qc.invalidateQueries({ queryKey: coverageKeys.amc(values.amcCycleId) }); qc.invalidateQueries({ queryKey: ['coverage', 'amcs'] }); qc.invalidateQueries({ queryKey: ['coverage', 'equipment'] }); qc.invalidateQueries({ queryKey: ['equipment'] }) } }) }
+
 
