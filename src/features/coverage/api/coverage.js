@@ -47,7 +47,18 @@ export async function getAmcCycles({ page = 1, pageSize = 25, search = '', statu
   if (toDate) query = query.lte('end_date', toDate)
   const term = safeTerm(search); if (term) query = query.ilike('amc_code', `%${term}%`)
   const { data, error, count } = await query; if (error) throw error
-  return { rows: (data ?? []).map((row) => ({ ...row, effective_status: effectiveAmcStatus(row), totals: amcTotals(row) })), count: count ?? 0 }
+  const cycles = data ?? []
+  if (!cycles.length) return { rows: [], count: count ?? 0 }
+  const [equipment, payments, services] = await Promise.all([
+    client().from('equipment').select(equipmentFields).in('id', cycles.map((row) => row.equipment_id)),
+    client().from('amc_payments').select('amc_cycle_id, amount, payment_status').in('amc_cycle_id', cycles.map((row) => row.id)),
+    client().from('services').select('amc_cycle_id').in('amc_cycle_id', cycles.map((row) => row.id)),
+  ])
+  if (equipment.error || payments.error || services.error) throw equipment.error || payments.error || services.error
+  const equipmentById = new Map((equipment.data ?? []).map((row) => [row.id, row]))
+  const paymentsByCycle = new Map(); for (const payment of payments.data ?? []) paymentsByCycle.set(payment.amc_cycle_id, [...(paymentsByCycle.get(payment.amc_cycle_id) ?? []), payment])
+  const servicesByCycle = new Map(); for (const service of services.data ?? []) servicesByCycle.set(service.amc_cycle_id, [...(servicesByCycle.get(service.amc_cycle_id) ?? []), service])
+  return { rows: cycles.map((row) => { const detail = { ...row, equipment: equipmentById.get(row.equipment_id), amc_payments: paymentsByCycle.get(row.id) ?? [], services: servicesByCycle.get(row.id) ?? [] }; return { ...detail, effective_status: effectiveAmcStatus(detail), totals: amcTotals(detail) } }), count: count ?? 0 }
 }
 
 export async function getAmcCycle(id) {
