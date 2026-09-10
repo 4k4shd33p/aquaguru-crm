@@ -10,7 +10,8 @@ import { PaymentCorrectionForm } from '../features/payments/components/PaymentCo
 import { useAddEmiPayment, useAddSalePayment, useCorrectSale, useCreateEmiAccount, useSale, useSaleLookups } from '../features/sales/hooks/useSales'
 import { formatCurrency, formatDate, locationLabel, saleStatusTone, warrantyLabel } from '../features/sales/utils/salesDisplay'
 
-const today=()=>new Date().toLocaleDateString('en-CA')\nconst money=(value)=>value===null||value===undefined?'Not recorded':formatCurrency(value)
+const today=()=>new Date().toLocaleDateString('en-CA')
+const money=(value)=>value===null||value===undefined?'Not recorded':formatCurrency(value)
 
 function PaymentForm({onSave,saving,methods}) {
   const {register,handleSubmit}=useForm({defaultValues:{payment_date:today(),amount:'',payment_method_id:'',reference_number:'',notes:''}})

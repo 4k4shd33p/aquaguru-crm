@@ -4,14 +4,16 @@ const saleFields = `id, sale_code, customer_id, sale_date, invoice_number, invoi
   customers ( id, customer_code, name, phone ), lead_sources ( id, name ),
   sale_items ( id, product_model_id, quantity, standard_unit_price, actual_unit_price, unit_cost, discount, warranty_months, notes, product_models ( id, product_code, model_name ) ),
   sale_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, correction_of_payment_id, corrected_by_payment_id, payment_methods ( id, name ) ),
-  emi_accounts ( id, emi_code, total_financed_amount, expected_payment_amount, expected_payment_frequency, expected_payment_day, start_date, end_date, status, notes, emi_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, payment_methods ( id, name ) ) ),\n  sale_corrections ( id, correction_note, corrected_at, corrected_by )`
+  emi_accounts ( id, emi_code, total_financed_amount, expected_payment_amount, expected_payment_frequency, expected_payment_day, start_date, end_date, status, notes, emi_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, payment_methods ( id, name ) ) ),
+  sale_corrections ( id, correction_note, corrected_at, corrected_by )`
 
 const client = () => { if (!supabase) throw new Error('Supabase is not configured.'); return supabase }
 const nil = (value) => typeof value === 'string' ? value.trim() || null : value ?? null
 const numberOrNull = (value) => value === '' || value === null || value === undefined ? null : Number(value)
 
 export function saleTotals(sale) {
-  const valueKnown = (sale.sale_items ?? []).every((item) => item.actual_unit_price !== null && item.actual_unit_price !== undefined)\n  const total = valueKnown ? (sale.sale_items ?? []).reduce((sum, item) => sum + Number(item.actual_unit_price) * Number(item.quantity || 0), 0) : null
+  const valueKnown = (sale.sale_items ?? []).every((item) => item.actual_unit_price !== null && item.actual_unit_price !== undefined)
+  const total = valueKnown ? (sale.sale_items ?? []).reduce((sum, item) => sum + Number(item.actual_unit_price) * Number(item.quantity || 0), 0) : null
   const valid = (payment) => (payment.payment_status ?? 'Valid') === 'Valid'
   const salePayments = (sale.sale_payments ?? []).filter(valid).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
   const emiPayments = (sale.emi_accounts ?? []).flatMap((account) => account.emi_payments ?? []).filter(valid).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
