@@ -18,6 +18,13 @@ export async function getFinanceSummary({ dateFrom, dateTo }) {
   return rows[0] ?? null
 }
 
+export async function getFinancePerformance({ dateFrom, dateTo }) {
+  return requireData(await client().rpc('get_finance_performance', {
+    p_date_from: dateFrom,
+    p_date_to: dateTo,
+  }))
+}
+
 export async function getFinanceRecentCollections({ dateFrom, dateTo, limit = 25 }) {
   return requireData(await client().rpc('get_finance_recent_collections', {
     p_date_from: dateFrom,
@@ -36,4 +43,5 @@ export async function getFinanceOutstanding({ category, asOf, page = 1, pageSize
 
   return { rows, count: Number(rows[0]?.total_count ?? 0) }
 }
+
 
