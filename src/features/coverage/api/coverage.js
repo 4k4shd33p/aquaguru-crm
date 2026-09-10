@@ -10,10 +10,7 @@ const equipmentFields = `id, equipment_code, serial_number, status, source, cust
 const warrantyFields = `id, warranty_code, equipment_id, sale_id, installation_id, start_date, end_date, duration_months, planned_visits, status, notes, created_at,
   equipment ( ${equipmentFields} ), sales ( id, sale_code ), installations ( id, installation_code, installation_date ),
   services ( id, service_code, service_date, status, technician_charge, service_types ( name ) )`
-const amcFields = `id, amc_code, equipment_id, cycle_number, start_date, end_date, standard_price, agreed_price, planned_visits, status, notes, created_at,
-  equipment ( ${equipmentFields} ),
-  amc_payments ( id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, correction_of_payment: amc_payments!amc_payments_correction_of_payment_id_fkey ( id, payment_code ), corrected_by_payment: amc_payments!amc_payments_corrected_by_payment_id_fkey ( id, payment_code ), payment_methods ( id, name ) ),
-  services ( id, service_code, service_date, status, technician_charge, service_types ( name ) )`
+const amcFields = `id, amc_code, equipment_id, cycle_number, start_date, end_date, standard_price, agreed_price, planned_visits, status, notes, created_at`
 const partWarrantyFields = `id, part_warranty_code, service_item_id, equipment_id, part_id, start_date, end_date, duration_months, status, replaced_warranty_id, notes, created_at,
   equipment ( ${equipmentFields} ), parts ( id, part_code, name ),
   service_items!service_item_warranties_service_item_id_fkey ( id, service_id, services ( id, service_code, service_date, status ) )`
@@ -60,7 +57,14 @@ export async function getAmcCycle(id) {
   ])
   if (cycle.error) throw cycle.error
   if (corrections.error) throw corrections.error
-  return { ...cycle.data, effective_status: effectiveAmcStatus(cycle.data), totals: amcTotals(cycle.data), corrections: corrections.data ?? [] }
+  const [equipment, payments, services] = await Promise.all([
+    client().from('equipment').select(equipmentFields).eq('id', cycle.data.equipment_id).maybeSingle(),
+    client().from('amc_payments').select('id, payment_code, payment_status, payment_date, amount, payment_method_id, reference_number, notes, void_reason, correction_of_payment_id, corrected_by_payment_id').eq('amc_cycle_id', id).order('payment_date', { ascending: false }),
+    client().from('services').select('id, service_code, service_date, status, technician_charge').eq('amc_cycle_id', id).order('service_date', { ascending: false }),
+  ])
+  if (equipment.error || payments.error || services.error) throw equipment.error || payments.error || services.error
+  const detail = { ...cycle.data, equipment: equipment.data, amc_payments: payments.data ?? [], services: services.data ?? [] }
+  return { ...detail, effective_status: effectiveAmcStatus(detail), totals: amcTotals(detail), corrections: corrections.data ?? [] }
 }
 
 export async function getCompletedInitialInstallationDate(equipmentId) {
