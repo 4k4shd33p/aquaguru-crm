@@ -11,11 +11,11 @@ const nil = (value) => typeof value === 'string' ? value.trim() || null : value 
 const numberOrNull = (value) => value === '' || value === null || value === undefined ? null : Number(value)
 
 export function saleTotals(sale) {
-  const total = (sale.sale_items ?? []).reduce((sum, item) => sum + Number(item.actual_unit_price || 0) * Number(item.quantity || 0), 0)
+  const valueKnown = (sale.sale_items ?? []).every((item) => item.actual_unit_price !== null && item.actual_unit_price !== undefined)\n  const total = valueKnown ? (sale.sale_items ?? []).reduce((sum, item) => sum + Number(item.actual_unit_price) * Number(item.quantity || 0), 0) : null
   const valid = (payment) => (payment.payment_status ?? 'Valid') === 'Valid'
   const salePayments = (sale.sale_payments ?? []).filter(valid).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
   const emiPayments = (sale.emi_accounts ?? []).flatMap((account) => account.emi_payments ?? []).filter(valid).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
-  return { total, collected: salePayments + emiPayments, outstanding: total - salePayments - emiPayments, salePayments, emiPayments }
+  return { total, totalKnown: valueKnown, collected: salePayments + emiPayments, outstanding: total === null ? null : total - salePayments - emiPayments, salePayments, emiPayments }
 }
 
 function paymentHistoryRows(payments = []) {
@@ -87,12 +87,13 @@ export async function getActiveCustomerLocations(customerId) {
 }
 
 export async function createAtomicSale(values) {
-  const { data, error } = await client().rpc('create_sale_with_items', {
+  const rpcName = values.historicalEntry ? 'create_historical_sale_with_items' : 'create_sale_with_items'
+  const { data, error } = await client().rpc(rpcName, {
     p_submission_key: values.submissionKey,
     p_customer_id: values.customerId,
     p_sale_date: values.saleDate,
     p_status: values.status,
-    p_items: values.items.map((item) => ({ product_model_id: item.product_model_id, quantity: Number(item.quantity), standard_unit_price: numberOrNull(item.standard_unit_price), actual_unit_price: Number(item.actual_unit_price), unit_cost: numberOrNull(item.unit_cost), discount: Number(item.discount || 0), warranty_months: Number(item.warranty_months), notes: nil(item.notes), unit_locations: item.unit_locations.map((id) => id || null) })),
+    p_items: values.items.map((item) => ({ product_model_id: item.product_model_id, quantity: Number(item.quantity), standard_unit_price: numberOrNull(item.standard_unit_price), actual_unit_price: values.historicalEntry ? numberOrNull(item.actual_unit_price) : Number(item.actual_unit_price), unit_cost: numberOrNull(item.unit_cost), discount: values.historicalEntry ? numberOrNull(item.discount) : Number(item.discount || 0), warranty_months: numberOrNull(item.warranty_months), notes: nil(item.notes), unit_locations: item.unit_locations.map((id) => id || null) })),
     p_invoice_number: nil(values.invoiceNumber), p_invoice_date: values.invoiceDate || null, p_lead_source_id: values.leadSourceId || null, p_source_detail: nil(values.sourceDetail), p_notes: nil(values.notes),
   })
   if (error) throw error

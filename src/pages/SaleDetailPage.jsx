@@ -10,7 +10,7 @@ import { PaymentCorrectionForm } from '../features/payments/components/PaymentCo
 import { useAddEmiPayment, useAddSalePayment, useCorrectSale, useCreateEmiAccount, useSale, useSaleLookups } from '../features/sales/hooks/useSales'
 import { formatCurrency, formatDate, locationLabel, saleStatusTone, warrantyLabel } from '../features/sales/utils/salesDisplay'
 
-const today=()=>new Date().toLocaleDateString('en-CA')
+const today=()=>new Date().toLocaleDateString('en-CA')\nconst money=(value)=>value===null||value===undefined?'Not recorded':formatCurrency(value)
 
 function PaymentForm({onSave,saving,methods}) {
   const {register,handleSubmit}=useForm({defaultValues:{payment_date:today(),amount:'',payment_method_id:'',reference_number:'',notes:''}})
@@ -63,9 +63,9 @@ export function SaleDetailPage(){
   return <div className="sale-detail">
     <Link className="back-link" to="/sales"><ArrowLeft size={17}/>Sales</Link>
     <header className="customer-detail__header"><div><span className="eyebrow">Sale</span><h2>{sale.sale_code}</h2><p>{formatDate(sale.sale_date)} · {sale.customers?.name}</p></div><div className="sale-detail__actions"><Badge tone={saleStatusTone(sale.status)}>{sale.status}</Badge><Button onClick={()=>setModal('correct')}><Pencil size={16}/>Edit / Correct Sale</Button></div></header>
-    <div className="sale-summary"><div><span>Total</span><strong>{formatCurrency(sale.totals.total)}</strong></div><div><span>Collected</span><strong>{formatCurrency(sale.totals.collected)}</strong></div><div><span>Outstanding</span><strong>{formatCurrency(sale.totals.outstanding)}</strong></div></div>
+    <div className="sale-summary"><div><span>Total</span><strong>{money(sale.totals.total)}</strong></div><div><span>Collected</span><strong>{formatCurrency(sale.totals.collected)}</strong></div><div><span>Outstanding</span><strong>{money(sale.totals.outstanding)}</strong></div></div>
     <section className="card"><h2>Overview</h2><p>Invoice: {sale.invoice_number||'Not recorded'} · Lead source: {sale.lead_sources?.name||'Not recorded'}</p><p>{sale.notes||'No notes recorded.'}</p></section>
-    <section className="card"><h2>Items</h2>{sale.sale_items.map(i=><div className="sale-item-row" key={i.id}><strong>{i.product_models?.model_name} × {i.quantity}</strong><span>{formatCurrency(Number(i.actual_unit_price)*i.quantity)} · {warrantyLabel(i.warranty_months)}</span><small>Usual {formatCurrency(i.standard_unit_price)} · Our Cost {formatCurrency(i.unit_cost)} · Discount {formatCurrency(i.discount)}</small></div>)}</section>
+    <section className="card"><h2>Items</h2>{sale.sale_items.map(i=><div className="sale-item-row" key={i.id}><strong>{i.product_models?.model_name} × {i.quantity}</strong><span>{i.actual_unit_price === null ? 'Not recorded' : formatCurrency(Number(i.actual_unit_price)*i.quantity)} · {warrantyLabel(i.warranty_months)}</span><small>Usual {formatCurrency(i.standard_unit_price)} · Our Cost {formatCurrency(i.unit_cost)} · Discount {money(i.discount)}</small></div>)}</section>
     <section className="card"><h2>Generated equipment</h2>{sale.equipment.length ? sale.equipment.map(e=><Link className="sale-item-row" key={e.id} to={`/equipment/${e.id}`}><strong>{e.equipment_code}</strong><span>{locationLabel(e.locations)}</span></Link>) : <p>No generated equipment found.</p>}</section>
     {sale.sale_corrections?.length ? <section className="card"><h2>Correction History</h2>{sale.sale_corrections.map(c=><p key={c.id}>{formatDate(c.corrected_at)} · {c.correction_note||'Sale details corrected'}</p>)}</section> : null}
     <section className="card"><div className="section-heading"><h2>Payments</h2><Button onClick={()=>setModal('payment')}><Plus size={16}/>Record payment</Button></div>{sale.sale_payments.length?<div>{sale.sale_payments.map((payment) => paymentHistory(payment, 'sale_payments'))}</div>:<p>No payments recorded yet.</p>}</section>
