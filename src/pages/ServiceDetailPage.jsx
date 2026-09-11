@@ -1,5 +1,5 @@
 import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useParams } from 'react-router-dom'
 import { ErrorState } from '../components/feedback/ErrorState'
@@ -42,8 +42,7 @@ function ServiceCorrectionForm({ service, lookups, saving, onSave, onClose }) {
   const [items, setItems] = useState(() => service.service_items.map(amendmentItem))
   const [step, setStep] = useState(1)
   const [error, setError] = useState('')
-  const submitInFlight = useState(false)
-  const [submitting, setSubmitting] = submitInFlight
+  const submitting = useRef(false)
   const values = watch()
   const serviceDate = watch('service_date')
   const coverage = useEquipmentCoverage(service.equipment_id, serviceDate)
@@ -53,9 +52,10 @@ function ServiceCorrectionForm({ service, lookups, saving, onSave, onClose }) {
   const updateItem = (key, patch) => setItems((current) => current.map((item) => (item.id || item.local_id) === key ? { ...item, ...patch } : item))
   const removeItem = (key) => setItems((current) => current.map((item) => (item.id || item.local_id) === key ? (item.id ? { ...item, action: 'remove' } : null) : item).filter(Boolean))
   const restoreItem = (key) => updateItem(key, { action: 'update' })
+  const technicianName = (id) => (lookups.technicians || []).find((technician) => technician.id === id)?.name || 'Not assigned'
   const changedFields = [
     ['Service Date', defaults.service_date, values.service_date],
-    ['Technician', defaults.technician_id, values.technician_id],
+    ['Technician', technicianName(defaults.technician_id), technicianName(values.technician_id)],
     ['Issue Reported', defaults.issue_reported, values.issue_reported],
     ['Diagnosis', defaults.diagnosis, values.diagnosis],
     ['Work Performed', defaults.work_performed, values.work_performed],
@@ -65,13 +65,22 @@ function ServiceCorrectionForm({ service, lookups, saving, onSave, onClose }) {
     ['Notes', defaults.notes, values.notes],
     ...(v2 ? [['Final Customer Charge', String(defaults.final_customer_charge), String(values.final_customer_charge)], ['Technician Cost', String(defaults.technician_charge), String(values.technician_charge)], ['Travel Cost', String(defaults.travel_cost), String(values.travel_cost)], ['Other Direct Cost', String(defaults.other_direct_cost), String(values.other_direct_cost)]] : []),
   ].filter(([, before, after]) => String(before ?? '') !== String(after ?? ''))
-  const itemChanges = items.flatMap((item) => item.action === 'add' ? [`Added: ${item.parts?.name || item.description || item.item_type}`] : item.action === 'remove' ? [`Removed: ${item.parts?.name || item.item_type}`] : [])
+  const itemChanges = items.flatMap((item) => {
+    const name = item.parts?.name || service.service_items.find((source) => source.id === item.id)?.parts?.name || item.description || item.item_type
+    if (item.action === 'add') return [`Added: ${name}`]
+    if (item.action === 'remove') return [`Removed: ${name}`]
+    const before = service.service_items.find((source) => source.id === item.id)
+    if (!before) return []
+    return [['Description', before.description || '', item.description || ''], ['Item Notes', before.notes || '', item.notes || ''], ['Usual Price', String(before.standard_price ?? ''), String(item.standard_price ?? '')], ['Internal Cost', String(before.internal_cost ?? ''), String(item.internal_cost ?? '')], ...(!v2 ? [['Legacy Customer Price', String(before.actual_customer_price ?? ''), String(item.actual_customer_price ?? '')]] : [])]
+      .filter(([, beforeValue, afterValue]) => beforeValue !== afterValue)
+      .map(([label, beforeValue, afterValue]) => `${name} — ${label}: ${beforeValue || 'Not set'} → ${afterValue || 'Not set'}`)
+  })
   async function submit(values) {
-    if (step !== 4 || submitting || saving) return
+    if (step !== 4 || submitting.current || saving) return
     if (!String(values.correction_note || '').trim()) { setError('Enter a correction reason before saving.'); return }
     setError('')
-    setSubmitting(true)
-    try { await onSave({ values, items }) } catch (err) { setSubmitting(false); setError(err?.message || 'The Service correction could not be saved.') }
+    submitting.current = true
+    try { await onSave({ values, items }) } catch (err) { submitting.current = false; setError(err?.message || 'The Service correction could not be saved.') }
   }
 
   return <form className="service-wizard service-correction-workflow" onSubmit={handleSubmit(submit)}>
@@ -82,7 +91,7 @@ function ServiceCorrectionForm({ service, lookups, saving, onSave, onClose }) {
     {step === 2 && <section className="service-wizard__panel"><h3>Work items & coverage</h3><p className="form-help">Existing physical identity remains protected. Add only omitted work; safe ordinary items can be marked for removal.</p>{items.map((item, index) => item.action === 'add' ? <ServiceItemEditor key={item.local_id} item={item} index={index} parts={parts} equipmentId={service.equipment_id} serviceDate={serviceDate} status={service.status} coverage={coverage.data || { warranties: [], amcCycles: [] }} onChange={(next) => updateItem(item.local_id, { ...next, action: 'add' })} onRemove={() => removeItem(item.local_id)} /> : <section className="service-detail-item" key={item.id}><div className="service-item-editor__top"><strong>{item.parts?.name || item.item_type} × {item.quantity}</strong>{item.action === 'remove' ? <Button type="button" variant="secondary" onClick={() => restoreItem(item.id)}>Keep item</Button> : <button className="text-button" type="button" disabled={physicalIds.has(item.id)} title={physicalIds.has(item.id) ? 'Physical items with component or warranty history cannot be removed.' : undefined} onClick={() => removeItem(item.id)}><Trash2 size={15} />Remove</button>}</div>{item.action === 'remove' ? <p className="form-help">This ordinary item is queued for audited removal.</p> : <><p className="form-help">{physicalIds.has(item.id) ? 'Component or warranty history exists: part, quantity, replacement identity and coverage are locked.' : 'Part identity, quantity and coverage remain locked; permitted description, note and economic corrections are available.'}</p><div className="service-form-grid"><label>Description<input value={item.description} onChange={(event) => updateItem(item.id, { description: event.target.value })} /></label><label>Item Notes<input value={item.notes} onChange={(event) => updateItem(item.id, { notes: event.target.value })} /></label><label>Usual / Reference Price<input type="number" min="0" step="0.01" value={item.standard_price} onChange={(event) => updateItem(item.id, { standard_price: event.target.value })} /></label>{!v2 && <label>Legacy Customer Price<input type="number" min="0" step="0.01" value={item.actual_customer_price} onChange={(event) => updateItem(item.id, { actual_customer_price: event.target.value })} /></label>}<label>Internal / Item Cost<input type="number" min="0" step="0.01" value={item.internal_cost} onChange={(event) => updateItem(item.id, { internal_cost: event.target.value })} /></label></div></>}</section>)}<Button type="button" variant="secondary" onClick={() => setItems((current) => [...current, blankAmendmentItem()])}><Plus size={16} />Add forgotten work item</Button></section>}
     {step === 3 && <section className="service-wizard__panel"><h3>Costs and financials</h3>{v2 ? <div className="service-form-grid"><label>Final Customer Charge<input type="number" min="0" step="0.01" {...register('final_customer_charge')} /></label><label>Technician Cost<input type="number" min="0" step="0.01" {...register('technician_charge')} /></label><label>Travel / Petrol Cost<input type="number" min="0" step="0.01" {...register('travel_cost')} /></label><label>Other Direct Cost<input type="number" min="0" step="0.01" {...register('other_direct_cost')} /></label><label>Other Direct Cost Note<input {...register('other_direct_cost_note')} /></label><label>Customer Charge Note<input {...register('customer_charge_note')} /></label></div> : <p className="form-help">This historical V1 Service keeps its legacy item-level customer-price semantics.</p>}<FinancialDetails financials={financials} /></section>}
     {step === 4 && <section className="service-wizard__panel"><h3>Review changes</h3><p className="form-help">Nothing is saved by reaching this step. Check the changes, provide a reason, then explicitly save the audited correction.</p><div className="service-review"><section><h3>Protected identity</h3><p><strong>{service.service_code}</strong> · {service.equipment?.equipment_code} · {service.equipment?.customers?.name || 'Customer not recorded'}</p><p>{service.service_types?.name || 'Service type not recorded'} · {service.status}</p></section><section><h3>Before → After</h3>{changedFields.length || itemChanges.length ? <ul>{changedFields.map(([label, before, after]) => <li key={label}><strong>{label}</strong>: {before || 'Not set'} → {after || 'Not set'}</li>)}{itemChanges.map((change) => <li key={change}>{change}</li>)}</ul> : <p>No material changes detected.</p>}</section><section><h3>Corrected financial context</h3><FinancialDetails financials={financials} /></section></div><label>Correction Reason<input placeholder="Why is this correction needed?" {...register('correction_note')} /></label></section>}
-    <div className="service-wizard__actions">{step > 1 && <Button type="button" variant="secondary" onClick={() => setStep((value) => value - 1)}>Back</Button>}{step < 4 ? <Button type="button" onClick={() => setStep((value) => value + 1)}>Continue</Button> : <Button type="submit" disabled={saving || submitting}>{saving || submitting ? 'Saving correction…' : 'Save Correction'}</Button>}<Button type="button" variant="secondary" onClick={onClose}>Cancel</Button></div>
+    <div className="service-wizard__actions">{step > 1 && <Button type="button" variant="secondary" onClick={() => setStep((value) => value - 1)}>Back</Button>}{step < 4 ? <Button type="button" onClick={() => setStep((value) => value + 1)}>Continue</Button> : <Button type="submit" disabled={saving || submitting.current}>{saving || submitting.current ? 'Saving correction…' : 'Save Correction'}</Button>}<Button type="button" variant="secondary" onClick={onClose}>Cancel</Button></div>
   </form>
 }
 
