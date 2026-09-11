@@ -43,6 +43,7 @@ export function categoryPath(row) {
   if (row.category === 'Sales') return `/sales/${row.transaction_id}`
   if (row.category === 'Service') return `/service/${row.transaction_id}`
   if (row.category === 'AMC') return `/coverage/amc/${row.transaction_id}`
+  if (row.category === 'Installation') return `/installations/${row.transaction_id}`
   return null
 }
 
