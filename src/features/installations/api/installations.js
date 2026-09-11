@@ -16,7 +16,7 @@ export const equipmentContextFields = `
 
 const installationFields = `
   id, installation_code, equipment_id, sale_item_id, scheduled_date, installation_date,
-  technician_id, status, tds_in, tds_out, installation_charge, technician_charge, notes,
+  technician_id, status, tds_in, tds_out, installation_charge, technician_charge, travel_cost, other_direct_cost, other_direct_cost_note, notes,
   installation_classification, created_at, updated_at,
   equipment ( ${equipmentContextFields} ), technicians ( id, name, phone )
 `
@@ -40,7 +40,9 @@ export async function getInstallation(installationId) {
   if (error) throw error
   const { data: warranty, error: warrantyError } = await client().from('equipment_warranties').select('id, warranty_code, start_date, end_date, duration_months, planned_visits, status').eq('installation_id', installationId).eq('is_automatic_sale_origin', true).maybeSingle()
   if (warrantyError) throw warrantyError
-  return { ...data, automaticWarranty: warranty ?? null }
+  const { data: corrections, error: correctionError } = await client().from('installation_corrections').select('id, correction_reason, corrected_at, corrected_by').eq('installation_id', installationId).order('corrected_at', { ascending: false })
+  if (correctionError) throw correctionError
+  return { ...data, automaticWarranty: warranty ?? null, corrections: corrections ?? [] }
 }
 
 export async function getEquipmentInstallationHistory(equipmentId) {
@@ -81,10 +83,33 @@ export async function completeInstallation({ installationId, values }) {
   const { data, error } = await client().rpc('complete_installation', {
     p_submission_key: values.submissionKey, p_installation_id: installationId, p_installation_date: values.installationDate,
     p_technician_id: nil(values.technicianId), p_tds_in: numericOrNull(values.tdsIn), p_tds_out: numericOrNull(values.tdsOut),
-    p_installation_charge: numericOrNull(values.installationCharge), p_technician_charge: numericOrNull(values.technicianCharge), p_notes: nil(values.notes),
+    p_installation_charge: numericOrNull(values.installationCharge), p_technician_charge: numericOrNull(values.technicianCharge),
+    p_travel_cost: numericOrNull(values.travelCost), p_other_direct_cost: numericOrNull(values.otherDirectCost),
+    p_other_direct_cost_note: nil(values.otherDirectCostNote), p_notes: nil(values.notes),
   })
   if (error) throw error
   const result = data?.[0]; if (!result?.installation_id) throw new Error('The installation was completed but no confirmation was returned.')
+  return result
+}
+
+export async function correctInstallation({ installationId, values }) {
+  const { data, error } = await client().rpc('correct_installation', {
+    p_installation_id: installationId,
+    p_installation_date: values.installationDate,
+    p_technician_id: nil(values.technicianId),
+    p_tds_in: numericOrNull(values.tdsIn),
+    p_tds_out: numericOrNull(values.tdsOut),
+    p_installation_charge: numericOrNull(values.installationCharge),
+    p_technician_charge: numericOrNull(values.technicianCharge),
+    p_travel_cost: numericOrNull(values.travelCost),
+    p_other_direct_cost: numericOrNull(values.otherDirectCost),
+    p_other_direct_cost_note: nil(values.otherDirectCostNote),
+    p_notes: nil(values.notes),
+    p_correction_reason: nil(values.correctionReason),
+  })
+  if (error) throw error
+  const result = data?.[0]
+  if (!result?.installation_id) throw new Error('The Installation correction did not return a confirmation.')
   return result
 }
 
@@ -93,4 +118,5 @@ export async function rescheduleInstallation({ installationId, values }) {
   if (error) throw error
   return data
 }
+
 

@@ -16,5 +16,7 @@ function invalidate(qc, equipmentId, installationId, warrantyId) {
 }
 export function useCreateInstallation() { const qc = useQueryClient(); return useMutation({ mutationFn: api.createInstallation, onSuccess: (result, values) => invalidate(qc, values.equipmentId, result.installation_id) }) }
 export function useCompleteInstallation() { const qc = useQueryClient(); return useMutation({ mutationFn: api.completeInstallation, onSuccess: (result, variables) => invalidate(qc, variables.equipmentId, variables.installationId, result.equipment_warranty_id) }) }
+export function useCorrectInstallation() { const qc = useQueryClient(); return useMutation({ mutationFn: api.correctInstallation, onSuccess: (result, variables) => invalidate(qc, variables.equipmentId, variables.installationId, result.equipment_warranty_id) }) }
 export function useRescheduleInstallation() { const qc = useQueryClient(); return useMutation({ mutationFn: api.rescheduleInstallation, onSuccess: (result) => invalidate(qc, result.equipment_id, result.id) }) }
+
 
