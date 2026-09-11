@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase'
 const client = () => { if (!supabase) throw new Error('Supabase is not configured.'); return supabase }
 const nil = (value) => typeof value === 'string' ? value.trim() || null : value ?? null
 const numericOrNull = (value) => value === '' || value === undefined || value === null ? null : Number(value)
+const workItemsPayload = (items = []) => items.map((item) => ({ id: item.id ?? null, description: nil(item.description), quantity: numericOrNull(item.quantity), commercial_treatment: item.commercialTreatment, customer_charge: numericOrNull(item.customerCharge), direct_cost: numericOrNull(item.directCost), notes: nil(item.notes) }))
 const range = (page, pageSize) => [(page - 1) * pageSize, page * pageSize - 1]
 const cleanTerm = (value) => value.trim().replace(/[%,_(),]/g, ' ')
 
@@ -42,7 +43,9 @@ export async function getInstallation(installationId) {
   if (warrantyError) throw warrantyError
   const { data: corrections, error: correctionError } = await client().from('installation_corrections').select('id, correction_reason, corrected_at, corrected_by').eq('installation_id', installationId).order('corrected_at', { ascending: false })
   if (correctionError) throw correctionError
-  return { ...data, automaticWarranty: warranty ?? null, corrections: corrections ?? [] }
+  const { data: additionalWork, error: additionalWorkError } = await client().from('installation_work_items').select('id, description, quantity, commercial_treatment, customer_charge, direct_cost, notes, created_at, updated_at').eq('installation_id', installationId).order('created_at')
+  if (additionalWorkError) throw additionalWorkError
+  return { ...data, automaticWarranty: warranty ?? null, corrections: corrections ?? [], additionalWork: additionalWork ?? [] }
 }
 
 export async function getEquipmentInstallationHistory(equipmentId) {
@@ -85,7 +88,7 @@ export async function completeInstallation({ installationId, values }) {
     p_technician_id: nil(values.technicianId), p_tds_in: numericOrNull(values.tdsIn), p_tds_out: numericOrNull(values.tdsOut),
     p_installation_charge: numericOrNull(values.installationCharge), p_technician_charge: numericOrNull(values.technicianCharge),
     p_travel_cost: numericOrNull(values.travelCost), p_other_direct_cost: numericOrNull(values.otherDirectCost),
-    p_other_direct_cost_note: nil(values.otherDirectCostNote), p_notes: nil(values.notes),
+    p_other_direct_cost_note: nil(values.otherDirectCostNote), p_notes: nil(values.notes), p_work_items: workItemsPayload(values.workItems),
   })
   if (error) throw error
   const result = data?.[0]; if (!result?.installation_id) throw new Error('The installation was completed but no confirmation was returned.')
@@ -105,6 +108,7 @@ export async function correctInstallation({ installationId, values }) {
     p_other_direct_cost: numericOrNull(values.otherDirectCost),
     p_other_direct_cost_note: nil(values.otherDirectCostNote),
     p_notes: nil(values.notes),
+    p_work_items: workItemsPayload(values.workItems),
     p_correction_reason: nil(values.correctionReason),
   })
   if (error) throw error
