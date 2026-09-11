@@ -4,7 +4,7 @@ import { Button } from '../../../components/ui/Button'
 import { EmptyState } from '../../../components/feedback/EmptyState'
 import { categoryPath, formatBalance, formatBusinessDate, formatMoney } from '../utils/financeDisplay'
 
-const tabs = [['all', 'All'], ['Sales', 'Sales'], ['Service', 'Service'], ['AMC', 'AMC']]
+const tabs = [['all', 'All'], ['Sales', 'Sales'], ['Service', 'Service'], ['AMC', 'AMC'], ['Installation', 'Installation']]
 
 function OutstandingReference({ row }) {
   const path = categoryPath(row)
