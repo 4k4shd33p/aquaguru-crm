@@ -45,7 +45,11 @@ export async function getInstallation(installationId) {
   if (correctionError) throw correctionError
   const { data: additionalWork, error: additionalWorkError } = await client().from('installation_work_items').select('id, description, quantity, commercial_treatment, customer_charge, direct_cost, notes, created_at, updated_at').eq('installation_id', installationId).order('created_at')
   if (additionalWorkError) throw additionalWorkError
-  return { ...data, automaticWarranty: warranty ?? null, corrections: corrections ?? [], additionalWork: additionalWork ?? [] }
+  const { data: payments, error: paymentError } = await client().from('installation_payments').select('id, installation_id, payment_date, amount, payment_method_id, reference_number, notes, payment_status, voided_at, void_reason, correction_of_payment_id, corrected_by_payment_id, created_at, payment_methods ( id, name )').eq('installation_id', installationId).order('payment_date', { ascending: false }).order('created_at', { ascending: false })
+  if (paymentError) throw paymentError
+  const { data: paymentSummaryRows, error: paymentSummaryError } = await client().rpc('get_installation_payment_summary', { p_installation_id: installationId })
+  if (paymentSummaryError) throw paymentSummaryError
+  return { ...data, automaticWarranty: warranty ?? null, corrections: corrections ?? [], additionalWork: additionalWork ?? [], payments: payments ?? [], paymentSummary: paymentSummaryRows?.[0] ?? null }
 }
 
 export async function getEquipmentInstallationHistory(equipmentId) {
@@ -57,6 +61,12 @@ export async function getEquipmentInstallationHistory(equipmentId) {
 export async function searchInstallationEquipment(search) {
   const term = cleanTerm(search); if (term.length < 2) return []
   const { data, error } = await client().from('equipment').select(equipmentContextFields).or(`equipment_code.ilike.%${term}%,serial_number.ilike.%${term}%`).order('equipment_code').limit(10)
+  if (error) throw error
+  return data ?? []
+}
+
+export async function getInstallationPaymentMethods() {
+  const { data, error } = await client().from('payment_methods').select('id, name').eq('is_active', true).order('name')
   if (error) throw error
   return data ?? []
 }
@@ -124,3 +134,36 @@ export async function rescheduleInstallation({ installationId, values }) {
 }
 
 
+
+
+export async function recordInstallationPayment({ installationId, values }) {
+  const { data, error } = await client().rpc('record_installation_payment', {
+    p_submission_key: values.submissionKey, p_installation_id: installationId,
+    p_payment_date: values.paymentDate, p_amount: Number(values.amount),
+    p_payment_method_id: values.paymentMethodId, p_reference_number: nil(values.referenceNumber), p_notes: nil(values.notes),
+  })
+  if (error) throw error
+  const result = data?.[0]
+  if (!result?.payment_id) throw new Error('The Installation payment did not return a confirmation.')
+  return result
+}
+
+export async function correctInstallationPayment({ paymentId, values }) {
+  const { data, error } = await client().rpc('correct_installation_payment', {
+    p_payment_id: paymentId, p_payment_date: values.paymentDate, p_amount: Number(values.amount),
+    p_payment_method_id: values.paymentMethodId, p_reference_number: nil(values.referenceNumber),
+    p_notes: nil(values.notes), p_reason: nil(values.reason),
+  })
+  if (error) throw error
+  const result = data?.[0]
+  if (!result?.replacement_payment_id) throw new Error('The Installation payment correction did not return a confirmation.')
+  return result
+}
+
+export async function voidInstallationPayment({ paymentId, reason }) {
+  const { data, error } = await client().rpc('void_installation_payment', { p_payment_id: paymentId, p_reason: nil(reason) })
+  if (error) throw error
+  const result = data?.[0]
+  if (!result?.payment_id) throw new Error('The Installation payment void did not return a confirmation.')
+  return result
+}
