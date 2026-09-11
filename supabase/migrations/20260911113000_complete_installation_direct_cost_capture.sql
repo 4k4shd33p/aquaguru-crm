@@ -28,6 +28,7 @@ declare
   v_existing_fingerprint text;
   v_fingerprint text;
   v_notes text;
+  v_other_direct_cost_note text;
   v_equipment_warranty_id uuid;
   v_warranty_code text;
 begin
@@ -60,6 +61,7 @@ begin
   end if;
 
   v_notes := nullif(btrim(p_notes), '');
+  v_other_direct_cost_note := nullif(btrim(p_other_direct_cost_note), '');
   v_fingerprint := md5(jsonb_build_object(
     'installation_id', p_installation_id,
     'installation_date', p_installation_date,
@@ -68,6 +70,9 @@ begin
     'tds_out', p_tds_out,
     'installation_charge', p_installation_charge,
     'technician_charge', p_technician_charge,
+    'travel_cost', p_travel_cost,
+    'other_direct_cost', p_other_direct_cost,
+    'other_direct_cost_note', v_other_direct_cost_note,
     'notes', v_notes
   )::text);
 
@@ -194,7 +199,7 @@ begin
         technician_charge = p_technician_charge,
         travel_cost = p_travel_cost,
         other_direct_cost = p_other_direct_cost,
-        other_direct_cost_note = nullif(btrim(p_other_direct_cost_note), ''),
+        other_direct_cost_note = v_other_direct_cost_note,
         notes = v_notes,
         status = 'Completed'
     where i.id = p_installation_id
