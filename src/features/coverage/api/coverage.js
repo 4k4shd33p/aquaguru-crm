@@ -149,3 +149,9 @@ export async function getEquipmentCoverage(equipmentId) {
 }
 
 
+
+export async function getAmcCycleEconomics(amcCycleId) {
+  const { data, error } = await client().rpc('get_amc_cycle_economics', { p_amc_cycle_id: amcCycleId })
+  if (error) throw error
+  return data?.[0] ?? null
+}
