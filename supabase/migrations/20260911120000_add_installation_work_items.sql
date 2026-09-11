@@ -452,6 +452,12 @@ $function$
 ;
 
 
+revoke all on function private.normalize_installation_work_items(jsonb, boolean) from public, anon;
+grant execute on function private.normalize_installation_work_items(jsonb, boolean) to authenticated;
+revoke all on function private.installation_work_items_snapshot(uuid) from public, anon;
+grant execute on function private.installation_work_items_snapshot(uuid) to authenticated;
+revoke all on function private.installation_work_item_cost_attribution() from public, anon;
+
 revoke all on function public.complete_installation(uuid, uuid, date, uuid, numeric, numeric, numeric, numeric, numeric, numeric, text, text, jsonb) from public, anon;
 grant execute on function public.complete_installation(uuid, uuid, date, uuid, numeric, numeric, numeric, numeric, numeric, numeric, text, text, jsonb) to authenticated;
 revoke all on function public.correct_installation(uuid, date, uuid, numeric, numeric, numeric, numeric, numeric, numeric, text, text, jsonb, text) from public, anon;
