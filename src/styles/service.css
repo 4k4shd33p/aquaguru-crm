@@ -53,3 +53,13 @@
 .service-review__facts dt { color: var(--text-muted, #64748b); font-size: .8rem; }
 .service-review__facts dd { margin: .15rem 0 0; font-weight: 600; }
 .service-correction-workflow .service-detail-item { margin-bottom: .75rem; }
+
+
+/* Phase 3.3.1: keep correction fields legible without redesigning the broader UI. */
+.service-correction-workflow .service-detail-item { min-width: 0; }
+.service-correction-workflow .service-detail-item .service-form-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .85rem; }
+.service-correction-workflow .service-detail-item label { min-width: 0; }
+.service-correction-workflow .service-detail-item input { min-width: 0; width: 100%; }
+.service-correction-workflow .service-item-editor__top { align-items: flex-start; gap: .75rem; }
+.service-wizard__panel form { margin: 0; }
+@media (max-width: 720px) { .service-correction-workflow .service-detail-item .service-form-grid { grid-template-columns: 1fr; } }
