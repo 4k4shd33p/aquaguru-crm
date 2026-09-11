@@ -5,7 +5,7 @@ function MetricCard({ label, value, note, unavailable = false, balance = false }
   return <Card className="finance-metric-card"><span>{label}</span><strong className={balance && Number(value) < 0 ? 'finance-credit' : ''}>{unavailable ? 'Unavailable' : balance ? formatBalance(value) : formatMoney(value)}</strong>{note && <small>{note}</small>}</Card>
 }
 
-export function FinanceSummary({ summary, asOf }) {
+export function FinanceSummary({ summary, installation, asOf }) {
   return <>
     <section className="finance-metrics" aria-label="Finance summary">
       <MetricCard label="Transaction Value" value={summary?.total_transaction_value} unavailable={!summary?.total_transaction_value_available} />
@@ -15,6 +15,7 @@ export function FinanceSummary({ summary, asOf }) {
     <section className="finance-breakdown" aria-label="Category performance">
       <CategoryCard title="Sales" value={summary?.sales_value} valueAvailable collections={summary?.sales_collections} outstanding={summary?.sales_outstanding_as_of} cost={summary?.sales_known_direct_cost} costAvailable={summary?.sales_direct_cost_available} contribution={summary?.sales_contribution} contributionAvailable={summary?.sales_contribution_available} extras={<><span>Direct collections: {formatMoney(summary?.sales_direct_collections)}</span><span>EMI collections: {formatMoney(summary?.sales_emi_collections)}</span></>} />
       <CategoryCard title="Service" value={summary?.service_value} valueAvailable collections={summary?.service_collections} outstanding={summary?.service_outstanding_as_of} cost={summary?.service_known_direct_cost} costAvailable={summary?.service_direct_cost_available} contribution={summary?.service_contribution} contributionAvailable={summary?.service_contribution_available} />
+      <CategoryCard title="Installation / Additional Work" value={installation?.installation_value} valueAvailable collections={installation?.installation_collections} outstanding={installation?.installation_outstanding_as_of} note="Only separately charged Additional Work is included. Legacy Installation Charge is excluded." />
       <CategoryCard title="AMC" value={summary?.amc_value} valueAvailable={summary?.amc_value_available} collections={summary?.amc_collections} outstanding={summary?.amc_outstanding_as_of} note="AMC direct costs and contribution are not available in this report." />
     </section>
     <section className="finance-collection-cards" aria-label="Collection breakdown">
@@ -22,6 +23,7 @@ export function FinanceSummary({ summary, asOf }) {
       <MetricCard label="Sales EMI collections" value={summary?.sales_emi_collections} />
       <MetricCard label="Service collections" value={summary?.service_collections} />
       <MetricCard label="AMC collections" value={summary?.amc_collections} />
+      <MetricCard label="Installation collections" value={installation?.installation_collections} />
     </section>
   </>
 }
