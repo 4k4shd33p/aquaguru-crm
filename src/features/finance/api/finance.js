@@ -18,6 +18,14 @@ export async function getFinanceSummary({ dateFrom, dateTo }) {
   return rows[0] ?? null
 }
 
+export async function getInstallationFinanceSummary({ dateFrom, dateTo }) {
+  const rows = requireData(await client().rpc('get_installation_finance_summary', {
+    p_date_from: dateFrom,
+    p_date_to: dateTo,
+  }))
+  return rows[0] ?? null
+}
+
 export async function getFinancePerformance({ dateFrom, dateTo }) {
   return requireData(await client().rpc('get_finance_performance', {
     p_date_from: dateFrom,
