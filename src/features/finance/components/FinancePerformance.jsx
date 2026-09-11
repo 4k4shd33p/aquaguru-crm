@@ -1,7 +1,7 @@
 import { Card } from '../../../components/ui/Card'
 import { formatMoney } from '../utils/financeDisplay'
 
-const labels = { 'Product Sales': 'Product Sales', 'Paid Service': 'Paid Service', AMC: 'AMC', 'Complimentary / Goodwill': 'Complimentary / Goodwill', Unallocated: 'Unallocated', Consolidated: 'Consolidated' }
+const labels = { 'Product Sales': 'Product Sales', 'Paid Service': 'Paid Service', AMC: 'AMC', 'Installation / Additional Work': 'Installation / Additional Work', 'Complimentary / Goodwill': 'Complimentary / Goodwill', Unallocated: 'Unallocated', Consolidated: 'Consolidated' }
 
 function PerformanceCard({ row }) {
   const isConsolidated = row.category === 'Consolidated'
