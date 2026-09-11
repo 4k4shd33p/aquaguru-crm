@@ -4,6 +4,7 @@ import * as api from '../api/finance'
 export const financeKeys = {
   performance: (dates) => ['finance', 'performance', dates],
   summary: (dates) => ['finance', 'summary', dates],
+  installationSummary: (dates) => ['finance', 'installation-summary', dates],
   recentCollections: (dates, limit) => ['finance', 'recent-collections', dates, limit],
   outstanding: (filters) => ['finance', 'outstanding', filters],
 }
@@ -17,6 +18,12 @@ export const useFinancePerformance = (dates, enabled) => useQuery({
 export const useFinanceSummary = (dates, enabled) => useQuery({
   queryKey: financeKeys.summary(dates),
   queryFn: () => api.getFinanceSummary(dates),
+  enabled,
+})
+
+export const useInstallationFinanceSummary = (dates, enabled) => useQuery({
+  queryKey: financeKeys.installationSummary(dates),
+  queryFn: () => api.getInstallationFinanceSummary(dates),
   enabled,
 })
 
