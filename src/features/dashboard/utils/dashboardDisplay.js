@@ -49,6 +49,7 @@ export function collectionPath(item) {
   if (item.collection_type === 'Sale' || item.collection_type === 'EMI') return `/sales/${item.transaction_id}`
   if (item.collection_type === 'Service') return `/service/${item.transaction_id}`
   if (item.collection_type === 'AMC') return `/coverage/amc/${item.transaction_id}`
+  if (item.collection_type === 'Installation') return `/installations/${item.transaction_id}`
   return null
 }
 
