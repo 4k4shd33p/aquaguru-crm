@@ -40,3 +40,16 @@
 .service-effects p { padding:10px 0; margin:0; border-top:1px solid var(--line); }
 .service-effects p:first-child { border-top:0; }
 @media (max-width:720px) { .service-form-grid,.service-item-editor__grid,.service-detail-grid,.service-financial-preview,.service-financial-detail { grid-template-columns:1fr; }.service-wizard__panel { padding:16px; }.service-detail-item { grid-template-columns:1fr; }.service-detail-item div:last-of-type { text-align:left; }.service-wizard__actions { position:sticky; bottom:70px; padding:10px 0; background:var(--canvas); }.service-toolbar .list-toolbar__filters { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+
+.service-review { display: grid; gap: 1rem; }
+.service-review > section { border-top: 1px solid var(--border, #e5e7eb); padding-top: 1rem; }
+.service-review > section:first-child { border-top: 0; padding-top: 0; }
+.service-review h3 { margin: 0 0 .5rem; }
+.service-review p { margin: .45rem 0; }
+.service-review ul { margin: .5rem 0; padding-left: 1.25rem; }
+.service-review__facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; margin: .5rem 0 1rem; }
+.service-review__facts div { margin: 0; }
+.service-review__facts dt { color: var(--text-muted, #64748b); font-size: .8rem; }
+.service-review__facts dd { margin: .15rem 0 0; font-weight: 600; }
+.service-correction-workflow .service-detail-item { margin-bottom: .75rem; }
