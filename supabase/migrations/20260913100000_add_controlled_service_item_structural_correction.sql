@@ -26,7 +26,8 @@ declare
   v_source_component public.equipment_components%rowtype;
   v_prior_component public.equipment_components%rowtype;
   v_source_warranty public.service_item_warranties%rowtype;
-  v_parent_warranty public.service_item_warranties%rowtype;
+  v_parent_warranty_id uuid;
+  v_parent_warranty_end_date date;
   v_claimed_warranty public.service_item_warranties%rowtype;
   v_old_attribution jsonb;
   v_new_attribution jsonb;
@@ -283,7 +284,7 @@ begin
     end if;
 
     if v_source_warranty.replaced_warranty_id is not null then
-      select * into v_parent_warranty
+      select siw.id, siw.end_date into v_parent_warranty_id, v_parent_warranty_end_date
       from public.service_item_warranties siw
       where siw.id = v_source_warranty.replaced_warranty_id
       for update;
@@ -291,10 +292,10 @@ begin
 
     delete from public.service_item_warranties where id = v_source_warranty.id;
 
-    if v_parent_warranty.id is not null then
+    if v_parent_warranty_id is not null then
       update public.service_item_warranties
-      set status = case when v_parent_warranty.end_date < current_date then 'Expired' else 'Active' end
-      where id = v_parent_warranty.id;
+      set status = case when v_parent_warranty_end_date < current_date then 'Expired' else 'Active' end
+      where id = v_parent_warranty_id;
     end if;
   end if;
 
