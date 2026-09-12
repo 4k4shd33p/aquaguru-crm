@@ -55,7 +55,8 @@ begin
 
   if p_item_type not in ('Replacement', 'Repair', 'Maintenance', 'Labour / Work', 'Other')
      or p_coverage_type not in ('Equipment Warranty', 'AMC', 'Part Warranty', 'Paid', 'Complimentary', 'Other')
-     or p_quantity is null or p_quantity <= 0 then
+     or p_quantity is null or p_quantity <= 0
+     or p_part_warranty_requested is null then
     raise exception using errcode = '22023',
       message = 'structural correction requires a supported item type, coverage, and positive quantity';
   end if;
@@ -146,6 +147,11 @@ begin
   end if;
 
   if p_coverage_type = 'Part Warranty' then
+    if p_equipment_warranty_id is not null or p_amc_cycle_id is not null then
+      raise exception using errcode = '23514',
+        message = 'Part Warranty coverage cannot retain Equipment Warranty or AMC references';
+    end if;
+
     if p_part_warranty_requested then
       raise exception using errcode = '23514',
         message = 'Part Warranty replacement renewal is derived automatically';
