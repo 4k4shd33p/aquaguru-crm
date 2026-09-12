@@ -526,6 +526,16 @@ begin
 end;
 $$;
 alter table public.services add column if not exists shared_cost_allocation_fingerprint text;
+
+-- Allocation rows are readable CRM history, not a direct authenticated write surface.
+revoke all on table public.service_cost_allocations from public, anon, authenticated;
+grant select on table public.service_cost_allocations to authenticated;
+drop policy if exists authenticated_crm_access on public.service_cost_allocations;
+create policy authenticated_crm_read_access
+  on public.service_cost_allocations
+  for select
+  to authenticated
+  using (true);
 create or replace function private.apply_service_cost_allocations(p_service_id uuid,p_allocations jsonb) returns void language plpgsql security invoker set search_path=pg_catalog,public as $$
 declare v jsonb; v_source uuid; v_index integer; v_amount numeric; v_type text; v_attr record;
 begin
@@ -546,8 +556,13 @@ end $$;
 create or replace function private.service_allocation_fingerprint(p jsonb) returns text language sql immutable security invoker set search_path=pg_catalog as $$select md5(coalesce(p,'[]'::jsonb)::text)$$;
 revoke all on function private.apply_service_cost_allocations(uuid,jsonb) from public,anon,authenticated;
 revoke all on function private.service_allocation_fingerprint(jsonb) from public,anon,authenticated;
-create or replace function public.create_service_with_items_v2_allocated(p_submission_key uuid,p_equipment_id uuid,p_service_date date,p_service_type_id uuid,p_status text,p_items jsonb,p_final_customer_charge numeric default null,p_travel_cost numeric default 0,p_other_direct_cost numeric default 0,p_other_direct_cost_note text default null,p_customer_charge_note text default null,p_technician_id uuid default null,p_issue_reported text default null,p_diagnosis text default null,p_work_performed text default null,p_tds_in numeric default null,p_tds_out numeric default null,p_next_service_due date default null,p_technician_charge numeric default 0,p_equipment_warranty_id uuid default null,p_amc_cycle_id uuid default null,p_notes text default null,p_shared_cost_allocations jsonb default '[]'::jsonb) returns table(service_id uuid,service_code text,created boolean,service_item_id uuid,equipment_component_id uuid,new_part_warranty_id uuid) language plpgsql security invoker set search_path=pg_catalog,public as $$declare r record;f text;begin f:=private.service_allocation_fingerprint(p_shared_cost_allocations);select * into r from public.create_service_with_items_v2(p_submission_key,p_equipment_id,p_service_date,p_service_type_id,p_status,p_items,p_final_customer_charge,p_travel_cost,p_other_direct_cost,p_other_direct_cost_note,p_customer_charge_note,p_technician_id,p_issue_reported,p_diagnosis,p_work_performed,p_tds_in,p_tds_out,p_next_service_due,p_technician_charge,p_equipment_warranty_id,p_amc_cycle_id,p_notes) limit 1;if r.created then perform private.apply_service_cost_allocations(r.service_id,p_shared_cost_allocations);update public.services set shared_cost_allocation_fingerprint=f where id=r.service_id;elsif coalesce((select shared_cost_allocation_fingerprint from public.services where id=r.service_id),private.service_allocation_fingerprint('[]'::jsonb)) is distinct from f then raise exception using errcode='23505',message='submission_key already belongs to a different shared-cost allocation request';end if;return query select s.id,s.service_code,r.created,si.id,ec.id,sw.id from public.services s left join public.service_items si on si.service_id=s.id left join public.equipment_components ec on ec.source_service_item_id=si.id left join public.service_item_warranties sw on sw.service_item_id=si.id where s.id=r.service_id order by si.created_at,si.id;end $$;
-create or replace function public.create_service_with_items_v2_relocation_allocated(p_submission_key uuid,p_equipment_id uuid,p_service_date date,p_service_type_id uuid,p_status text,p_items jsonb,p_destination_location_id uuid,p_final_customer_charge numeric default null,p_travel_cost numeric default 0,p_other_direct_cost numeric default 0,p_other_direct_cost_note text default null,p_customer_charge_note text default null,p_technician_id uuid default null,p_issue_reported text default null,p_diagnosis text default null,p_work_performed text default null,p_tds_in numeric default null,p_tds_out numeric default null,p_next_service_due date default null,p_technician_charge numeric default 0,p_equipment_warranty_id uuid default null,p_amc_cycle_id uuid default null,p_notes text default null,p_shared_cost_allocations jsonb default '[]'::jsonb) returns table(service_id uuid,service_code text,created boolean,service_item_id uuid,equipment_component_id uuid,new_part_warranty_id uuid) language plpgsql security invoker set search_path=pg_catalog,public as $$declare r record;f text;begin f:=private.service_allocation_fingerprint(p_shared_cost_allocations);select * into r from public.create_service_with_items_v2_relocation(p_submission_key,p_equipment_id,p_service_date,p_service_type_id,p_status,p_items,p_destination_location_id,p_final_customer_charge,p_travel_cost,p_other_direct_cost,p_other_direct_cost_note,p_customer_charge_note,p_technician_id,p_issue_reported,p_diagnosis,p_work_performed,p_tds_in,p_tds_out,p_next_service_due,p_technician_charge,p_equipment_warranty_id,p_amc_cycle_id,p_notes) limit 1;if r.created then perform private.apply_service_cost_allocations(r.service_id,p_shared_cost_allocations);update public.services set shared_cost_allocation_fingerprint=f where id=r.service_id;elsif coalesce((select shared_cost_allocation_fingerprint from public.services where id=r.service_id),private.service_allocation_fingerprint('[]'::jsonb)) is distinct from f then raise exception using errcode='23505',message='submission_key already belongs to a different shared-cost allocation request';end if;return query select s.id,s.service_code,r.created,si.id,ec.id,sw.id from public.services s left join public.service_items si on si.service_id=s.id left join public.equipment_components ec on ec.source_service_item_id=si.id left join public.service_item_warranties sw on sw.service_item_id=si.id where s.id=r.service_id order by si.created_at,si.id;end $$;
+create or replace function public.create_service_with_items_v2_allocated(p_submission_key uuid,p_equipment_id uuid,p_service_date date,p_service_type_id uuid,p_status text,p_items jsonb,p_final_customer_charge numeric default null,p_travel_cost numeric default 0,p_other_direct_cost numeric default 0,p_other_direct_cost_note text default null,p_customer_charge_note text default null,p_technician_id uuid default null,p_issue_reported text default null,p_diagnosis text default null,p_work_performed text default null,p_tds_in numeric default null,p_tds_out numeric default null,p_next_service_due date default null,p_technician_charge numeric default 0,p_equipment_warranty_id uuid default null,p_amc_cycle_id uuid default null,p_notes text default null,p_shared_cost_allocations jsonb default '[]'::jsonb) returns table(service_id uuid,service_code text,created boolean,service_item_id uuid,equipment_component_id uuid,new_part_warranty_id uuid) language plpgsql security definer set search_path=pg_catalog,public as $$declare r record;f text;begin if auth.uid() is null then raise exception using errcode='28000',message='authenticated access is required'; end if; f:=private.service_allocation_fingerprint(p_shared_cost_allocations);select * into r from public.create_service_with_items_v2(p_submission_key,p_equipment_id,p_service_date,p_service_type_id,p_status,p_items,p_final_customer_charge,p_travel_cost,p_other_direct_cost,p_other_direct_cost_note,p_customer_charge_note,p_technician_id,p_issue_reported,p_diagnosis,p_work_performed,p_tds_in,p_tds_out,p_next_service_due,p_technician_charge,p_equipment_warranty_id,p_amc_cycle_id,p_notes) limit 1;if r.created then perform private.apply_service_cost_allocations(r.service_id,p_shared_cost_allocations);update public.services set shared_cost_allocation_fingerprint=f where id=r.service_id;elsif coalesce((select shared_cost_allocation_fingerprint from public.services where id=r.service_id),private.service_allocation_fingerprint('[]'::jsonb)) is distinct from f then raise exception using errcode='23505',message='submission_key already belongs to a different shared-cost allocation request';end if;return query select s.id,s.service_code,r.created,si.id,ec.id,sw.id from public.services s left join public.service_items si on si.service_id=s.id left join public.equipment_components ec on ec.source_service_item_id=si.id left join public.service_item_warranties sw on sw.service_item_id=si.id where s.id=r.service_id order by si.created_at,si.id;end $$;
+create or replace function public.create_service_with_items_v2_relocation_allocated(p_submission_key uuid,p_equipment_id uuid,p_service_date date,p_service_type_id uuid,p_status text,p_items jsonb,p_destination_location_id uuid,p_final_customer_charge numeric default null,p_travel_cost numeric default 0,p_other_direct_cost numeric default 0,p_other_direct_cost_note text default null,p_customer_charge_note text default null,p_technician_id uuid default null,p_issue_reported text default null,p_diagnosis text default null,p_work_performed text default null,p_tds_in numeric default null,p_tds_out numeric default null,p_next_service_due date default null,p_technician_charge numeric default 0,p_equipment_warranty_id uuid default null,p_amc_cycle_id uuid default null,p_notes text default null,p_shared_cost_allocations jsonb default '[]'::jsonb) returns table(service_id uuid,service_code text,created boolean,service_item_id uuid,equipment_component_id uuid,new_part_warranty_id uuid) language plpgsql security definer set search_path=pg_catalog,public as $$declare r record;f text;begin if auth.uid() is null then raise exception using errcode='28000',message='authenticated access is required'; end if; f:=private.service_allocation_fingerprint(p_shared_cost_allocations);select * into r from public.create_service_with_items_v2_relocation(p_submission_key,p_equipment_id,p_service_date,p_service_type_id,p_status,p_items,p_destination_location_id,p_final_customer_charge,p_travel_cost,p_other_direct_cost,p_other_direct_cost_note,p_customer_charge_note,p_technician_id,p_issue_reported,p_diagnosis,p_work_performed,p_tds_in,p_tds_out,p_next_service_due,p_technician_charge,p_equipment_warranty_id,p_amc_cycle_id,p_notes) limit 1;if r.created then perform private.apply_service_cost_allocations(r.service_id,p_shared_cost_allocations);update public.services set shared_cost_allocation_fingerprint=f where id=r.service_id;elsif coalesce((select shared_cost_allocation_fingerprint from public.services where id=r.service_id),private.service_allocation_fingerprint('[]'::jsonb)) is distinct from f then raise exception using errcode='23505',message='submission_key already belongs to a different shared-cost allocation request';end if;return query select s.id,s.service_code,r.created,si.id,ec.id,sw.id from public.services s left join public.service_items si on si.service_id=s.id left join public.equipment_components ec on ec.source_service_item_id=si.id left join public.service_item_warranties sw on sw.service_item_id=si.id where s.id=r.service_id order by si.created_at,si.id;end $$;
+revoke all on function public.create_service_with_items_v2_allocated(uuid,uuid,date,uuid,text,jsonb,numeric,numeric,numeric,text,text,uuid,text,text,text,numeric,numeric,date,numeric,uuid,uuid,text,jsonb) from public, anon, authenticated;
+grant execute on function public.create_service_with_items_v2_allocated(uuid,uuid,date,uuid,text,jsonb,numeric,numeric,numeric,text,text,uuid,text,text,text,numeric,numeric,date,numeric,uuid,uuid,text,jsonb) to authenticated;
+revoke all on function public.create_service_with_items_v2_relocation_allocated(uuid,uuid,date,uuid,text,jsonb,uuid,numeric,numeric,numeric,text,text,uuid,text,text,text,numeric,numeric,date,numeric,uuid,uuid,text,jsonb) from public, anon, authenticated;
+grant execute on function public.create_service_with_items_v2_relocation_allocated(uuid,uuid,date,uuid,text,jsonb,uuid,numeric,numeric,numeric,text,text,uuid,text,text,text,numeric,numeric,date,numeric,uuid,uuid,text,jsonb) to authenticated;
+
 create or replace function public.amend_service(
   p_service_id uuid,
   p_header jsonb,
@@ -711,3 +726,47 @@ begin
 end $$;
 revoke all on function public.amend_service(uuid,jsonb,jsonb,text) from public,anon;
 grant execute on function public.amend_service(uuid,jsonb,jsonb,text) to authenticated;
+
+-- This is the only authenticated allocation-aware correction entry point.
+-- The established amend_service engine remains SECURITY INVOKER for the legacy UI.
+create or replace function public.amend_service_with_allocations(
+  p_service_id uuid,
+  p_header jsonb,
+  p_items jsonb,
+  p_correction_note text,
+  p_shared_cost_allocations jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_header jsonb;
+begin
+  if auth.uid() is null then
+    raise exception using errcode = '28000', message = 'authenticated access is required';
+  end if;
+
+  if jsonb_typeof(coalesce(p_header, '{}'::jsonb)) <> 'object'
+     or jsonb_typeof(coalesce(p_items, '[]'::jsonb)) <> 'array'
+     or jsonb_typeof(p_shared_cost_allocations) <> 'array' then
+    raise exception using errcode = '22023',
+      message = 'Service amendment requires a header object, items array, and allocation array';
+  end if;
+
+  v_header := p_header || jsonb_build_object(
+    'shared_cost_allocations',
+    p_shared_cost_allocations
+  );
+
+  return public.amend_service(
+    p_service_id,
+    v_header,
+    p_items,
+    p_correction_note
+  );
+end;
+$$;
+revoke all on function public.amend_service_with_allocations(uuid,jsonb,jsonb,text,jsonb) from public, anon, authenticated;
+grant execute on function public.amend_service_with_allocations(uuid,jsonb,jsonb,text,jsonb) to authenticated;
