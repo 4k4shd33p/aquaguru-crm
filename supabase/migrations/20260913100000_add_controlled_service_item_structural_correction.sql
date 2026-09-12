@@ -108,7 +108,6 @@ begin
     ), '[]'::jsonb)
   ) into v_before;
 
-  if v_item.part_id is not null then
   if p_part_id is not null then
     select p.component_role_id, p.equipment_tracking_enabled,
            p.part_warranty_eligible, p.default_warranty_months
