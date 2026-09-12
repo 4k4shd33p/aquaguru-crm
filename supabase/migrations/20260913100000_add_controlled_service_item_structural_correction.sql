@@ -53,7 +53,9 @@ begin
     raise exception using errcode = '23514', message = 'a correction reason is required';
   end if;
 
-  if p_item_type not in ('Replacement', 'Repair', 'Maintenance', 'Labour / Work', 'Other')
+  if p_item_type is null
+     or p_coverage_type is null
+     or p_item_type not in ('Replacement', 'Repair', 'Maintenance', 'Labour / Work', 'Other')
      or p_coverage_type not in ('Equipment Warranty', 'AMC', 'Part Warranty', 'Paid', 'Complimentary', 'Other')
      or p_quantity is null or p_quantity <= 0
      or p_part_warranty_requested is null then
