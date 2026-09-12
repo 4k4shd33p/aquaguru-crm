@@ -134,6 +134,10 @@ begin
     raise exception using errcode = '23514', message = 'tracked replacement Part requires a component role';
   end if;
 
+  if v_component_required and v_service.status <> 'Completed' then
+    raise exception using errcode = '23514', message = 'component replacement requires a completed Service';
+  end if;
+
   if v_component_required and p_quantity <> 1 then
     raise exception using errcode = '23514',
       message = 'component-changing Replacement quantity must be exactly 1';
