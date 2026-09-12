@@ -63,3 +63,5 @@
 .service-correction-workflow .service-item-editor__top { align-items: flex-start; gap: .75rem; }
 .service-wizard__panel form { margin: 0; }
 @media (max-width: 720px) { .service-correction-workflow .service-detail-item .service-form-grid { grid-template-columns: 1fr; } }
+
+.shared-cost-allocation{display:grid;gap:12px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--canvas)}.shared-cost-allocation h3{margin:0}.shared-cost-allocation__row{display:grid;gap:9px;padding-top:12px;border-top:1px solid var(--line)}.shared-cost-allocation__row label{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,180px);align-items:center;gap:10px}.shared-cost-allocation__row small{color:var(--muted)}@media(max-width:720px){.shared-cost-allocation__row label{grid-template-columns:1fr}}
