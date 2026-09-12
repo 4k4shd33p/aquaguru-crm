@@ -23,8 +23,6 @@ as $function$
 declare
   v_service public.services%rowtype;
   v_item public.service_items%rowtype;
-  v_old_part record;
-  v_new_part record;
   v_source_component public.equipment_components%rowtype;
   v_prior_component public.equipment_components%rowtype;
   v_source_warranty public.service_item_warranties%rowtype;
@@ -41,6 +39,10 @@ declare
   v_component_required boolean := false;
   v_warranty_required boolean := false;
   v_had_prior_component boolean := false;
+  v_new_part_role_id uuid;
+  v_new_part_tracking boolean := false;
+  v_new_part_warranty_eligible boolean := false;
+  v_new_part_warranty_months integer;
 begin
   if auth.uid() is null then
     raise exception using errcode = '28000', message = 'authenticated access is required';
@@ -103,16 +105,11 @@ begin
   ) into v_before;
 
   if v_item.part_id is not null then
-    select p.id, p.component_role_id, p.equipment_tracking_enabled, p.part_warranty_eligible
-      into v_old_part
-    from public.parts p where p.id = v_item.part_id
-    for key share;
-  end if;
-
   if p_part_id is not null then
-    select p.id, p.component_role_id, p.equipment_tracking_enabled,
+    select p.component_role_id, p.equipment_tracking_enabled,
            p.part_warranty_eligible, p.default_warranty_months
-      into v_new_part
+      into v_new_part_role_id, v_new_part_tracking,
+           v_new_part_warranty_eligible, v_new_part_warranty_months
     from public.parts p
     where p.id = p_part_id and p.is_active
     for key share;
@@ -127,9 +124,9 @@ begin
   end if;
 
   v_component_required := p_item_type = 'Replacement'
-    and coalesce(v_new_part.equipment_tracking_enabled, false);
+    and coalesce(v_new_part_tracking, false);
 
-  if v_component_required and v_new_part.component_role_id is null then
+  if v_component_required and v_new_part_role_id is null then
     raise exception using errcode = '23514', message = 'tracked replacement Part requires a component role';
   end if;
 
@@ -141,7 +138,7 @@ begin
   if p_part_warranty_requested and (p_coverage_type <> 'Paid'
       or p_item_type <> 'Replacement'
       or p_part_id is null
-      or coalesce(v_new_part.part_warranty_eligible, false) is not true
+      or coalesce(v_new_part_warranty_eligible, false) is not true
       or p_quantity <> 1) then
     raise exception using errcode = '23514',
       message = 'a new part warranty requires an eligible one-unit Paid Replacement';
@@ -165,7 +162,7 @@ begin
     if not found or v_service.status <> 'Completed'
        or p_item_type <> 'Replacement'
        or p_quantity <> 1
-       or coalesce(v_new_part.part_warranty_eligible, false) is not true then
+       or coalesce(v_new_part_warranty_eligible, false) is not true then
       raise exception using errcode = '23514',
         message = 'Part Warranty coverage requires an active matching eligible one-unit completed Replacement';
     end if;
@@ -211,7 +208,7 @@ begin
   v_warranty_required := p_coverage_type = 'Part Warranty' or p_part_warranty_requested;
 
   if v_warranty_required and (v_service.status <> 'Completed'
-      or coalesce(v_new_part.default_warranty_months, 0) <= 0) then
+      or coalesce(v_new_part_warranty_months, 0) <= 0) then
     raise exception using errcode = '23514',
       message = 'part warranty creation requires a completed Service and a positive configured warranty duration';
   end if;
@@ -303,13 +300,13 @@ begin
 
   if v_component_required then
     perform pg_advisory_xact_lock(
-      hashtextextended(v_service.equipment_id::text || ':' || v_new_part.component_role_id::text, 0)
+      hashtextextended(v_service.equipment_id::text || ':' || v_new_part_role_id::text, 0)
     );
 
     if exists (
       select 1 from public.equipment_components ec
       where ec.equipment_id = v_service.equipment_id
-        and ec.component_role_id = v_new_part.component_role_id
+        and ec.component_role_id = v_new_part_role_id
         and ec.installed_date >= v_service.service_date
     ) then
       raise exception using errcode = '23514',
@@ -332,7 +329,7 @@ begin
     select * into v_prior_component
     from public.equipment_components ec
     where ec.equipment_id = v_service.equipment_id
-      and ec.component_role_id = v_new_part.component_role_id
+      and ec.component_role_id = v_new_part_role_id
       and ec.installed_date < v_service.service_date
       and ec.removed_date is null
     order by ec.installed_date desc, ec.created_at desc, ec.id desc
@@ -348,12 +345,12 @@ begin
     insert into public.equipment_components(
       equipment_id, part_id, component_role_id, installed_date, source_service_item_id
     ) values (
-      v_service.equipment_id, p_part_id, v_new_part.component_role_id, v_service.service_date, v_item.id
+      v_service.equipment_id, p_part_id, v_new_part_role_id, v_service.service_date, v_item.id
     );
   end if;
 
   if v_warranty_required then
-    v_duration := v_new_part.default_warranty_months;
+    v_duration := v_new_part_warranty_months;
     v_end_date := (v_service.service_date + make_interval(months => v_duration) - interval '1 day')::date;
 
     if p_coverage_type = 'Part Warranty' then
