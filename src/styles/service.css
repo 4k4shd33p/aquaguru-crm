@@ -82,3 +82,14 @@
 .service-internal-cost-summary span { color:var(--muted); font-size:12px; font-weight:700; }
 .service-amc-trace { grid-column:1/-1; margin:0; }
 .service-amc-trace a { font-weight:700; }
+
+.recorded-work-details { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--canvas); }
+.recorded-work-details div,.structural-correction__heading div { display:grid; gap:3px; }
+.recorded-work-details span,.structural-correction__heading span { color:var(--muted); font-size:12px; font-weight:700; }
+.structural-correction { display:grid; gap:16px; }
+.structural-correction__heading { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.structural-correction__heading h4,.structural-correction__review h3,.structural-correction__review h4 { margin:0; }
+.structural-correction__review { display:grid; gap:14px; }
+.structural-correction__review > section { display:grid; gap:8px; padding-top:12px; border-top:1px solid var(--line); }
+@media (max-width:720px) { .recorded-work-details,.structural-correction__heading { align-items:stretch; flex-direction:column; }.recorded-work-details button,.structural-correction__heading button { width:100%; } }
+

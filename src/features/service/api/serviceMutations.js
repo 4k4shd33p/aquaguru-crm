@@ -103,3 +103,22 @@ export async function amendService({ serviceId, values }) {
   if (error) throw error
   return data
 }
+
+export async function amendServiceItemStructurally({ values }) {
+  const { data, error } = await client().rpc('amend_service_item_structurally', {
+    p_service_item_id: values.itemId,
+    p_item_type: values.itemType,
+    p_part_id: values.partId || null,
+    p_quantity: Number(values.quantity),
+    p_coverage_type: values.coverageType,
+    p_equipment_warranty_id: values.equipmentWarrantyId || null,
+    p_amc_cycle_id: values.amcCycleId || null,
+    p_service_item_warranty_id: values.serviceItemWarrantyId || null,
+    p_part_warranty_requested: Boolean(values.partWarrantyRequested),
+    p_shared_cost_allocations: values.sharedCostAllocations,
+    p_correction_reason: nil(values.correctionReason),
+  })
+  if (error) throw error
+  return data
+}
+
