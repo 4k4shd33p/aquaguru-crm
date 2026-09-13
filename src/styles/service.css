@@ -93,3 +93,23 @@
 .structural-correction__review > section { display:grid; gap:8px; padding-top:12px; border-top:1px solid var(--line); }
 @media (max-width:720px) { .recorded-work-details,.structural-correction__heading { align-items:stretch; flex-direction:column; }.recorded-work-details button,.structural-correction__heading button { width:100%; } }
 
+
+
+/* Phase 3.4.3.2: keep mixed-service economics readable without changing attribution. */
+.service-work-item-cost-summary { display:grid; gap:12px; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--canvas); }
+.service-work-item-cost-summary h4,.service-shared-costs h4 { margin:0; }
+.service-work-item-cost-summary__groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; }
+.service-work-item-cost-summary__groups p,.service-work-item-cost-summary__total { display:grid; gap:4px; margin:0; padding:10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); }
+.service-work-item-cost-summary__groups span,.service-work-item-cost-summary__total span { color:var(--muted); font-size:12px; font-weight:700; }
+.service-work-item-cost-summary__groups small { color:var(--muted); font-size:12px; }
+.service-work-item-cost-summary__total { grid-template-columns:1fr auto; align-items:center; }
+.service-shared-costs { display:grid; gap:4px; margin-top:16px; }
+.shared-cost-allocation__targets { display:grid; gap:8px; }
+.shared-cost-allocation__row label { min-width:0; }
+.shared-cost-allocation__row label span { color:var(--text); font-weight:700; }
+.shared-cost-allocation__remainder { display:flex; justify-content:space-between; gap:12px; margin:0; padding:9px 10px; border-radius:7px; background:var(--surface); }
+.shared-cost-allocation__remainder span { color:var(--muted); font-size:12px; font-weight:700; }
+.shared-cost-allocation__remainder--error { color:var(--danger, #b42318); }
+.service-detail-item--paid-context { background:color-mix(in srgb, var(--surface) 94%, var(--blue-100)); border-radius:8px; padding:14px; margin-top:10px; }
+.service-detail-item__profit { color:var(--text) !important; font-weight:700; }
+.service-detail-item__profit strong { color:var(--text); }
