@@ -9,74 +9,20 @@ const equipmentFields = `
   product_models ( id, product_code, model_name ),
   sale_items ( id, sale_id, sales ( id, sale_code ) )
 `
-
 const componentFields = `
   id, equipment_id, part_id, component_role_id, installed_date, removed_date, source_service_item_id, notes, created_at,
   parts ( id, part_code, name, brand, model, equipment_tracking_enabled ),
   component_roles ( id, name ),
   source_service_item:service_items!equipment_components_source_service_item_fk ( id, services ( id, service_code ) )
 `
-
 function requireClient() { if (!supabase) throw new Error('Supabase is not configured.'); return supabase }
 const nullable = (value) => (typeof value === 'string' ? value.trim() : value) || null
 const today = () => new Date().toLocaleDateString('en-CA')
 const effectiveAmcStatus = (cycle) => cycle.status !== 'Active' ? cycle.status : cycle.end_date && cycle.end_date < today() ? 'Expired' : 'Active'
-
-function payload(values) {
-  return { customer_id: values.customer_id, location_id: nullable(values.location_id), equipment_type_id: nullable(values.equipment_type_id), product_model_id: nullable(values.product_model_id), source: values.source, serial_number: nullable(values.serial_number), status: values.status, notes: nullable(values.notes) }
-}
-
-export async function getEquipmentList({ page = 1, pageSize = 25, search = '', equipmentTypeId = '', source = '', status = '' }) {
-  const from = (page - 1) * pageSize
-  let query = requireClient().from('equipment').select(equipmentFields, { count: 'exact' }).order('created_at', { ascending: false }).range(from, from + pageSize - 1)
-  if (equipmentTypeId) query = query.eq('equipment_type_id', equipmentTypeId)
-  if (source) query = query.eq('source', source)
-  if (status) query = query.eq('status', status)
-  const term = search.trim()
-  if (term) { const safeTerm = term.replace(/[%,_(),]/g, ' '); query = query.or(`equipment_code.ilike.%${safeTerm}%,serial_number.ilike.%${safeTerm}%`) }
-  const { data, error, count } = await query
-  if (error) throw error
-  return { equipment: data ?? [], count: count ?? 0 }
-}
-
-export async function getEquipmentById(equipmentId) {
-  const { data, error } = await requireClient().from('equipment').select(equipmentFields).eq('id', equipmentId).single()
-  if (error) throw error
-  return data
-}
-
-export async function getEquipmentOperationalSummaries(equipmentIds = []) {
-  const ids = [...new Set(equipmentIds.filter(Boolean))]
-  if (!ids.length) return new Map()
-  const client = requireClient()
-  const [installations, warranties, cycles, services] = await Promise.all([
-    client.from('installations').select('id, equipment_id, installation_code, installation_classification, installation_date, scheduled_date, status, technicians ( id, name )').in('equipment_id', ids).order('installation_date', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }),
-    client.from('equipment_warranties').select('id, equipment_id, warranty_code, start_date, end_date, status').in('equipment_id', ids).order('end_date', { ascending: false }),
-    client.from('amc_cycles').select('id, equipment_id, amc_code, cycle_number, start_date, end_date, status').in('equipment_id', ids).order('end_date', { ascending: false }),
-    client.from('services').select('id, equipment_id, service_code, service_date, status, next_service_due, amc_cycle_id, equipment_warranty_id, service_types ( name ), service_items ( coverage_type )').in('equipment_id', ids).order('service_date', { ascending: false }).order('created_at', { ascending: false }),
-  ])
-  if (installations.error || warranties.error || cycles.error || services.error) throw installations.error || warranties.error || cycles.error || services.error
-  const group = (rows = [], key = 'equipment_id') => rows.reduce((map, row) => map.set(row[key], [...(map.get(row[key]) ?? []), row]), new Map())
-  const installationByEquipment = group(installations.data)
-  const warrantyByEquipment = group(warranties.data)
-  const amcByEquipment = group(cycles.data)
-  const serviceByEquipment = group(services.data)
-  return new Map(ids.map((id) => {
-    const installationHistory = installationByEquipment.get(id) ?? []
-    const warrantyHistory = warrantyByEquipment.get(id) ?? []
-    const amcHistory = (amcByEquipment.get(id) ?? []).map((cycle) => ({ ...cycle, effective_status: effectiveAmcStatus(cycle) }))
-    const serviceHistory = (serviceByEquipment.get(id) ?? []).map((service) => {
-      const coverage = [...new Set((service.service_items ?? []).map((item) => item.coverage_type).filter(Boolean))]
-      return { ...service, coverage_context: coverage.length === 1 ? coverage[0] : coverage.length > 1 ? 'Mixed coverage' : service.amc_cycle_id ? 'AMC' : service.equipment_warranty_id ? 'Equipment Warranty' : null }
-    })
-    const initialInstallation = installationHistory.find((row) => row.installation_classification === 'Initial Installation' && row.status === 'Completed') ?? null
-    const warranty = warrantyHistory.find((row) => row.status === 'Active' && (!row.end_date || row.end_date >= today())) ?? null
-    const amc = amcHistory.find((row) => row.effective_status === 'Active') ?? null
-    const recommendedNextService = serviceHistory.find((row) => row.status === 'Completed' && row.next_service_due)?.next_service_due ?? null
-    return [id, { initialInstallation, installationHistory, warranty, warrantyHistory, amc, amcHistory, latestService: serviceHistory[0] ?? null, serviceHistory: serviceHistory.slice(0, 10), recommendedNextService }]
-  }))
-}
-
+function payload(values) { return { customer_id: values.customer_id, location_id: nullable(values.location_id), equipment_type_id: nullable(values.equipment_type_id), product_model_id: nullable(values.product_model_id), source: values.source, serial_number: nullable(values.serial_number), status: values.status, notes: nullable(values.notes) } }
+export async function getEquipmentList({ page = 1, pageSize = 25, search = '', equipmentTypeId = '', source = '', status = '' }) { const from = (page - 1) * pageSize; let query = requireClient().from('equipment').select(equipmentFields, { count: 'exact' }).order('created_at', { ascending: false }).range(from, from + pageSize - 1); if (equipmentTypeId) query = query.eq('equipment_type_id', equipmentTypeId); if (source) query = query.eq('source', source); if (status) query = query.eq('status', status); const term = search.trim(); if (term) { const safeTerm = term.replace(/[%,_(),]/g, ' '); query = query.or(`equipment_code.ilike.%${safeTerm}%,serial_number.ilike.%${safeTerm}%`) } const { data, error, count } = await query; if (error) throw error; return { equipment: data ?? [], count: count ?? 0 } }
+export async function getEquipmentById(equipmentId) { const { data, error } = await requireClient().from('equipment').select(equipmentFields).eq('id', equipmentId).single(); if (error) throw error; return data }
+export async function getEquipmentOperationalSummaries(equipmentIds = []) { const ids = [...new Set(equipmentIds.filter(Boolean))]; if (!ids.length) return new Map(); const client = requireClient(); const [installations, warranties, cycles, services] = await Promise.all([client.from('installations').select('id, equipment_id, installation_code, installation_classification, installation_date, scheduled_date, status, technicians ( id, name )').in('equipment_id', ids).order('installation_date', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }),client.from('equipment_warranties').select('id, equipment_id, warranty_code, start_date, end_date, status').in('equipment_id', ids).order('end_date', { ascending: false }),client.from('amc_cycles').select('id, equipment_id, amc_code, cycle_number, start_date, end_date, status').in('equipment_id', ids).order('end_date', { ascending: false }),client.from('services').select('id, equipment_id, service_code, service_date, status, next_service_due, amc_cycle_id, equipment_warranty_id, service_types ( name ), service_items ( coverage_type )').in('equipment_id', ids).order('service_date', { ascending: false }).order('created_at', { ascending: false })]); if (installations.error || warranties.error || cycles.error || services.error) throw installations.error || warranties.error || cycles.error || services.error; const group = (rows = [], key = 'equipment_id') => rows.reduce((map, row) => map.set(row[key], [...(map.get(row[key]) ?? []), row]), new Map()); const installationByEquipment = group(installations.data); const warrantyByEquipment = group(warranties.data); const amcByEquipment = group(cycles.data); const serviceByEquipment = group(services.data); return new Map(ids.map((id) => { const installationHistory = installationByEquipment.get(id) ?? []; const warrantyHistory = warrantyByEquipment.get(id) ?? []; const amcHistory = (amcByEquipment.get(id) ?? []).map((cycle) => ({ ...cycle, effective_status: effectiveAmcStatus(cycle) })); const serviceHistory = (serviceByEquipment.get(id) ?? []).map((service) => { const coverage = [...new Set((service.service_items ?? []).map((item) => item.coverage_type).filter(Boolean))]; return { ...service, coverage_context: coverage.length === 1 ? coverage[0] : coverage.length > 1 ? 'Mixed coverage' : service.amc_cycle_id ? 'AMC' : service.equipment_warranty_id ? 'Equipment Warranty' : null } }); const initialInstallation = installationHistory.find((row) => row.installation_classification === 'Initial Installation' && row.status === 'Completed') ?? null; const warranty = warrantyHistory.find((row) => row.status === 'Active' && (!row.end_date || row.end_date >= today())) ?? null; const amc = amcHistory.find((row) => row.effective_status === 'Active') ?? null; const recommendedNextService = serviceHistory.find((row) => row.status === 'Completed' && row.next_service_due)?.next_service_due ?? null; return [id, { initialInstallation, installationHistory, warranty, warrantyHistory, amc, amcHistory, latestService: serviceHistory[0] ?? null, serviceHistory: serviceHistory.slice(0, 10), recommendedNextService }] })) }
 export async function getEquipmentTypes() { const { data, error } = await requireClient().from('equipment_types').select('id, code, name, description').eq('is_active', true).order('name'); if (error) throw error; return data ?? [] }
 export async function getProductModels(equipmentTypeId = '') { let query = requireClient().from('product_models').select('id, product_code, model_name, equipment_type_id').eq('is_active', true).order('model_name'); if (equipmentTypeId) query = query.eq('equipment_type_id', equipmentTypeId); const { data, error } = await query; if (error) throw error; return data ?? [] }
 export async function searchEquipmentCustomers(search) { const term = search.trim(); if (!term) return []; const { data, error } = await requireClient().rpc('search_customers', { p_search_text: term, p_customer_type_id: null, p_is_active: null, p_city: null, p_area: null, p_offset: 0, p_limit: 10 }); if (error) throw error; return (data ?? []).map(({ id, customer_code, name, phone, is_active }) => ({ id, customer_code, name, phone, is_active })) }
@@ -86,6 +32,7 @@ export async function getEquipmentComponents(equipmentId) { const { data, error 
 export async function getEquipmentLocationHistory(equipmentId) { const { data, error } = await requireClient().from('equipment_location_history').select(`id, equipment_id, old_location_id, new_location_id, movement_date, source, source_service_id, notes, created_at, old_location:locations!equipment_location_history_old_location_id_fkey ( id, location_name, area, city, pincode ), new_location:locations!equipment_location_history_new_location_id_fkey ( id, location_name, area, city, pincode ), source_service:services!equipment_location_history_source_service_id_fkey ( id, service_code )`).eq('equipment_id', equipmentId).order('movement_date', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }); if (error) throw error; return data ?? [] }
 export async function getTrackedComponentParts() { const { data, error } = await requireClient().from('parts').select('id, part_code, name, brand, model, component_role_id, component_roles ( id, name )').eq('is_active', true).eq('equipment_tracking_enabled', true).not('component_role_id', 'is', null).order('name'); if (error) throw error; return data ?? [] }
 export async function recordExistingComponent({ equipmentId, values }) { const { data, error } = await requireClient().from('equipment_components').insert({ equipment_id: equipmentId, component_role_id: values.component_role_id, part_id: values.part_id, installed_date: nullable(values.installed_date), notes: nullable(values.notes) }).select(componentFields).single(); if (error) throw error; return data }
+export async function correctRecordedExistingComponent(values) { const { data, error } = await requireClient().rpc('correct_recorded_existing_component', { p_component_id: values.componentId, p_part_id: values.part_id, p_installed_date: nullable(values.installed_date), p_notes: nullable(values.notes), p_correction_reason: values.correction_reason }); if (error) throw error; return data?.[0] ?? null }
 export async function createEquipment(values) { const { data, error } = await requireClient().from('equipment').insert(payload(values)).select(equipmentFields).single(); if (error) throw error; return data }
 async function moveEquipmentLocation({ equipmentId, newLocationId }) { const { error } = await requireClient().rpc('move_equipment_location', { p_equipment_id: equipmentId, p_new_location_id: newLocationId, p_movement_date: null, p_source: 'Manual equipment update', p_notes: null, p_source_service_id: null }); if (error) throw error }
 export async function updateEquipment({ equipmentId, values, currentLocationId, currentCustomerId }) { const updates = payload(values); const previousLocationId = nullable(currentLocationId); const nextLocationId = updates.location_id; const locationChanged = previousLocationId !== nextLocationId; if (locationChanged && values.customer_id !== currentCustomerId) throw new Error('Change the equipment customer and location in separate updates.'); if (locationChanged && previousLocationId && !nextLocationId) throw new Error('A recorded equipment location cannot be removed. Select the correct location instead.'); if (locationChanged) delete updates.location_id; const { data, error } = await requireClient().from('equipment').update(updates).eq('id', equipmentId).select(equipmentFields).single(); if (error) throw error; if (locationChanged) await moveEquipmentLocation({ equipmentId, newLocationId }); return locationChanged ? getEquipmentById(equipmentId) : data }
