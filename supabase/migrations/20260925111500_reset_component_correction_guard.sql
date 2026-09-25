@@ -11,7 +11,7 @@ returns table (equipment_component_id uuid)
 language plpgsql
 security definer
 set search_path = pg_catalog, public
-as $$
+as $component_correction$
 declare
   v_component public.equipment_components%rowtype;
   v_before jsonb;
