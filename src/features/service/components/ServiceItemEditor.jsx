@@ -3,7 +3,8 @@ import { usePartWarranties } from '../hooks/useService'
 import { formatDate } from '../utils/serviceDisplay'
 
 export function ServiceItemEditor({ item, index, parts, equipmentId, serviceDate, status, coverage, replacementRoleId = '', onChange, onRemove }) {
-  const selectableParts = item.item_type === 'Replacement' && replacementRoleId ? parts.filter((candidate) => candidate.component_role_id === replacementRoleId) : parts\n  const part = parts.find((candidate) => candidate.id === item.part_id)
+  const selectableParts = item.item_type === 'Replacement' && replacementRoleId ? parts.filter((candidate) => candidate.component_role_id === replacementRoleId) : parts
+  const part = parts.find((candidate) => candidate.id === item.part_id)
   const warranties = usePartWarranties(equipmentId, item.part_id, serviceDate)
   const completed = status === 'Completed'
   const tracked = completed && item.item_type === 'Replacement' && part?.equipment_tracking_enabled && Number(item.quantity) === 1
