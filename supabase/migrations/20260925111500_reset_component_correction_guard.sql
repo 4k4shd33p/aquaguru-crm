@@ -142,8 +142,7 @@ begin
 
   return query select v_component.id;
 end;
-$;
-
+$component_correction$;
 
 alter function public.correct_recorded_existing_component(uuid, uuid, date, text, text) owner to postgres;
 revoke all on function public.correct_recorded_existing_component(uuid, uuid, date, text, text) from public;
